@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Environment files — set these in Railway/Vercel dashboards
+server/.env
+client/.env
+.env
+
+# Vite timestamp files
+*.timestamp-*.mjs
+
+# Scripts with hardcoded credentials
+server/run_schema.mjs
