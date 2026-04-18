@@ -24,16 +24,20 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
 
   const targets = ESCALATION_TARGETS[userRole] || []
   const isAnonymous = complaint?.is_anonymous_requested
+  // Principal always sees full identity — no choice needed
+  const isEscalatingToPrincipal = target === 'escalated_to_principal'
+  const showAnonymityDecision = isAnonymous && !isEscalatingToPrincipal
 
   const handleEscalate = async () => {
     if (!target) return toast.error('Please select escalation target')
-    if (isAnonymous && revealIdentity === null) return toast.error('Please decide on identity reveal')
+    if (showAnonymityDecision && revealIdentity === null) return toast.error('Please decide on identity reveal')
 
     setLoading(true)
     try {
       await api.patch(`/api/complaints/${complaint.id}/escalate`, {
         escalate_to: target,
-        reveal_identity: isAnonymous ? revealIdentity : false,
+        // Auto-reveal when escalating to principal; otherwise respect the decision
+        reveal_identity: isEscalatingToPrincipal ? true : (isAnonymous ? revealIdentity : false),
         reason,
       })
       toast.success('Complaint escalated successfully')
@@ -79,8 +83,8 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
             </div>
           </div>
 
-          {/* Anonymity decision — only if student requested it */}
-          {isAnonymous && (
+          {/* Anonymity decision — only if student requested it AND not escalating to principal */}
+          {showAnonymityDecision && (
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
               <p className="font-semibold text-purple-800 text-sm mb-1">⚠️ Anonymous Request</p>
               <p className="text-purple-700 text-sm mb-3">
@@ -133,9 +137,15 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
             >
               Cancel
             </button>
+            {/* Show info banner when escalating to principal */}
+            {isEscalatingToPrincipal && isAnonymous && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+                ℹ️ The Principal will see the student's full identity as this is the final escalation level.
+              </div>
+            )}
             <button
               onClick={handleEscalate}
-              disabled={loading || !target || (isAnonymous && revealIdentity === null)}
+              disabled={loading || !target || (showAnonymityDecision && revealIdentity === null)}
               className="flex-1 py-3 bg-[#003366] text-white rounded-xl font-semibold hover:bg-[#002952] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Escalating...' : 'Confirm Escalation'}

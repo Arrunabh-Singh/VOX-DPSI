@@ -94,10 +94,11 @@ router.get('/', verifyToken, async (req, res) => {
     } else if (role === 'council_member') {
       query = query.eq('assigned_council_member_id', userId)
     } else if (role === 'class_teacher') {
-      query = query.eq('status', 'escalated_to_teacher')
+      // Show all complaints currently at teacher level (active, in-progress, or resolved there)
+      query = query.eq('current_handler_role', 'class_teacher')
     } else if (role === 'coordinator') {
-      query = query.in('status', ['escalated_to_coordinator', 'escalated_to_principal', 'resolved', 'closed'])
-        .or(`status.eq.escalated_to_coordinator,status.eq.escalated_to_principal,status.eq.resolved,status.eq.closed`)
+      // Show complaints at coordinator level, plus ones they escalated to principal
+      query = query.in('current_handler_role', ['coordinator', 'principal'])
     }
     // principal and supervisor see all
 
@@ -306,7 +307,8 @@ router.patch('/:id/escalate', verifyToken, async (req, res) => {
       updated_at: new Date().toISOString(),
     }
 
-    if (reveal_identity) {
+    // Principal always gets full identity; otherwise respect the reveal decision
+    if (reveal_identity || escalate_to === 'escalated_to_principal') {
       updatePayload.identity_revealed = true
     }
 

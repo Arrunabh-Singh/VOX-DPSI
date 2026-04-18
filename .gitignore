@@ -14,3 +14,5 @@ client/.env
 
 # Scripts with hardcoded credentials
 server/run_schema.mjs
+
+.vercel

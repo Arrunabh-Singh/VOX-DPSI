@@ -60,9 +60,16 @@ export default function ComplaintDetail() {
   const isPrincipal = role === 'principal'
   const isSupervisor = role === 'supervisor'
   const canResolve = ['council_member', 'class_teacher', 'coordinator', 'principal'].includes(role)
-  const canEscalate = ['council_member', 'class_teacher', 'coordinator'].includes(role)
+  // Only the current handler can escalate — prevents double-escalation after handoff
+  const isCurrentHandler = complaint.current_handler_role === role
+  const canEscalate = isCurrentHandler && !['resolved', 'closed'].includes(complaint.status)
   const canVerify = isCouncil && complaint.status === 'raised'
-  const canMarkInProgress = isCouncil && complaint.status === 'verified'
+  // Each role can mark in-progress once they receive the complaint
+  const canMarkInProgress = (
+    (isCouncil && complaint.status === 'verified') ||
+    (isTeacher && complaint.status === 'escalated_to_teacher' && isCurrentHandler) ||
+    (isCoordinator && complaint.status === 'escalated_to_coordinator' && isCurrentHandler)
+  )
   const canAddNote = role !== 'student'
 
   const studentDisplay = complaint.student?.name === 'Anonymous Student'
@@ -102,7 +109,7 @@ export default function ComplaintDetail() {
                   </span>
                   <div className="flex items-center gap-2 mt-2">
                     <DomainBadge domain={complaint.domain} size="lg" />
-                    {complaint.is_anonymous_requested && isCouncil && (
+                    {complaint.is_anonymous_requested && role !== 'student' && (
                       <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-semibold">
                         🔒 Anon Requested
                       </span>
@@ -121,7 +128,7 @@ export default function ComplaintDetail() {
                   <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Last Updated</p>
                   <p className="font-medium text-gray-700 mt-0.5">{formatIST(complaint.updated_at)}</p>
                 </div>
-                {(isCouncil || isSupervisor || isPrincipal || isCoordinator || role === 'student') && complaint.student && (
+                {(isCouncil || isTeacher || isSupervisor || isPrincipal || isCoordinator || role === 'student') && complaint.student && (
                   <div>
                     <p className="text-gray-400 text-xs font-medium uppercase tracking-wide">Student</p>
                     <p className="font-medium text-gray-700 mt-0.5">{studentDisplay}</p>
@@ -224,7 +231,7 @@ export default function ComplaintDetail() {
                       ✅ Mark as Resolved
                     </button>
                   )}
-                  {canEscalate && !['resolved', 'closed', 'escalated_to_principal'].includes(complaint.status) && (
+                  {canEscalate && (
                     <button
                       onClick={() => setShowEscalate(true)}
                       disabled={actionLoading}
