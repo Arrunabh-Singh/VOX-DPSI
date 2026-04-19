@@ -2,13 +2,23 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
+import { VoxMark } from '../components/VoxLogo'
+
+const demoAccounts = [
+  { label: 'Student',     email: '5001@student.dpsindore.org' },
+  { label: 'Council',     email: '5002@student.dpsindore.org' },
+  { label: 'Teacher',     email: 'sharma@staff.dpsindore.org' },
+  { label: 'Coordinator', email: 'kapil@staff.dpsindore.org' },
+  { label: 'Principal',   email: 'principal@dpsindore.org' },
+  { label: 'Supervisor',  email: '5411@student.dpsindore.org' },
+]
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const [loading, setLoading]   = useState(false)
+  const { login }   = useAuth()
+  const navigate    = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -25,69 +35,66 @@ export default function Login() {
     }
   }
 
-  // Quick-fill demo accounts
-  const demoAccounts = [
-    { label: 'Student', email: '5001@student.dpsindore.org' },
-    { label: 'Council', email: '5002@student.dpsindore.org' },
-    { label: 'Teacher', email: 'sharma@staff.dpsindore.org' },
-    { label: 'Coordinator', email: 'kapil@staff.dpsindore.org' },
-    { label: 'Principal', email: 'principal@dpsindore.org' },
-    { label: 'Supervisor', email: '5411@student.dpsindore.org' },
-  ]
-
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      {/* Top accent bar */}
-      <div className="h-1.5 bg-gradient-to-r from-[#003366] via-[#FFD700] to-[#003366]" />
+    <div className="min-h-screen login-bg flex flex-col">
+      {/* Gold accent bar */}
+      <div className="h-1" style={{ background: 'linear-gradient(90deg,#C9920A,#F0B429,#C9920A)' }} />
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          {/* Logo card */}
-          <div className="bg-[#003366] rounded-2xl shadow-2xl px-8 py-10 mb-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div className="w-14 h-14 rounded-full bg-[#FFD700] flex items-center justify-center shadow-lg">
-                <span className="text-[#003366] font-black text-2xl">V</span>
-              </div>
+
+          {/* Hero branding */}
+          <div className="text-center mb-8">
+            {/* DPS Logo + VOX mark side by side */}
+            <div className="flex items-center justify-center gap-5 mb-5">
+              <img src="/assets/dps-logo.png" alt="DPS Indore" className="h-16 w-auto drop-shadow-lg" />
+              <div className="w-px h-12 bg-white/20" />
+              <VoxMark size={52} />
             </div>
-            <h1 className="text-white font-black text-4xl tracking-tight">
-              Vox <span className="text-[#FFD700]">DPSI</span>
+            <h1 className="text-white font-black text-4xl tracking-tight" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+              VOX <span style={{ color: '#F0B429' }}>DPSI</span>
             </h1>
-            <p className="text-blue-200 text-sm mt-2 font-medium">
-              Student Grievance Management System
-            </p>
-            <p className="text-blue-300 text-xs mt-1">Delhi Public School Indore</p>
+            <p className="mt-2 text-sm font-medium" style={{ color: '#A7C4B0' }}>Student Grievance Management System</p>
+            <p className="text-xs mt-1" style={{ color: '#6B9E7E' }}>Delhi Public School Indore</p>
           </div>
 
-          {/* Login form */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Sign in to your account</h2>
+          {/* Login card — frosted glass */}
+          <div className="glass-modal rounded-2xl p-8">
+            <h2 className="text-lg font-bold mb-5" style={{ color: '#1B4D2B' }}>Sign in to your account</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email address</label>
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: '#374151' }}>Email address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="you@dpsi.com"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all"
+                  placeholder="you@dpsindore.org"
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all"
+                  style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.7)' }}
+                  onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+                  onBlur={e => e.target.style.borderColor = '#D1FAE5'}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: '#374151' }}>Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all"
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all"
+                  style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.7)' }}
+                  onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+                  onBlur={e => e.target.style.borderColor = '#D1FAE5'}
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#003366] hover:bg-[#002952] text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                className="w-full text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                style={{ background: 'linear-gradient(135deg,#1B4D2B,#2A6B3F)', boxShadow: '0 4px 16px rgba(27,77,43,0.3)' }}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -98,15 +105,18 @@ export default function Login() {
               </button>
             </form>
 
-            {/* Demo quick-fill */}
-            <div className="mt-6 pt-5 border-t border-gray-100">
-              <p className="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wide">Demo Accounts</p>
+            {/* Demo accounts */}
+            <div className="mt-6 pt-5" style={{ borderTop: '1px solid #E5E7EB' }}>
+              <p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Demo Accounts</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {demoAccounts.map(a => (
                   <button
                     key={a.email}
                     onClick={() => { setEmail(a.email); setPassword('demo123') }}
-                    className="text-xs py-1.5 px-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 font-medium transition-colors"
+                    className="text-xs py-1.5 px-2 rounded-lg font-medium transition-colors"
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#DCFCE7'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#F0FDF4'}
                   >
                     {a.label}
                   </button>
@@ -116,8 +126,7 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Footer */}
-          <p className="text-center text-gray-400 text-xs mt-6">
+          <p className="text-center text-xs mt-6" style={{ color: '#4A7C5C' }}>
             Powered by DPS Indore Student Council
           </p>
         </div>

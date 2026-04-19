@@ -6,7 +6,7 @@ export default function StatusPill({ status, size = 'sm' }) {
   return (
     <span
       className={`inline-flex items-center font-semibold rounded-full ${padding}`}
-      style={{ color: s.color, backgroundColor: s.bg }}
+      style={{ color: s.color, backgroundColor: s.bg, border: `1px solid ${s.color}22` }}
     >
       {s.label}
     </span>

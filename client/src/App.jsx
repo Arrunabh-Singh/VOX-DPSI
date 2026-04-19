@@ -11,6 +11,7 @@ import TeacherDashboard from './pages/TeacherDashboard'
 import CoordinatorDashboard from './pages/CoordinatorDashboard'
 import PrincipalDashboard from './pages/PrincipalDashboard'
 import SupervisorDashboard from './pages/SupervisorDashboard'
+import VicePrincipalDashboard from './pages/VicePrincipalDashboard'
 import LoadingSpinner from './components/LoadingSpinner'
 
 const ROLE_DASHBOARDS = {
@@ -20,11 +21,16 @@ const ROLE_DASHBOARDS = {
   coordinator:    CoordinatorDashboard,
   principal:      PrincipalDashboard,
   supervisor:     SupervisorDashboard,
+  vice_principal: VicePrincipalDashboard,
 }
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA]"><LoadingSpinner message="Authenticating..." /></div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#EEF2EC' }}>
+      <LoadingSpinner message="Authenticating..." />
+    </div>
+  )
   if (!user) return <Navigate to="/login" replace />
   return children
 }
@@ -46,15 +52,15 @@ export default function App() {
             duration: 3000,
             style: {
               borderRadius: '12px',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'Outfit, system-ui, sans-serif',
               fontSize: '14px',
+              background: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(27,77,43,0.1)',
+              boxShadow: '0 8px 32px rgba(27,77,43,0.12)',
             },
-            success: {
-              iconTheme: { primary: '#16A34A', secondary: '#fff' },
-            },
-            error: {
-              iconTheme: { primary: '#DC2626', secondary: '#fff' },
-            },
+            success: { iconTheme: { primary: '#1B4D2B', secondary: '#fff' } },
+            error:   { iconTheme: { primary: '#DC2626', secondary: '#fff' } },
           }}
         />
         <Routes>

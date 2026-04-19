@@ -9,9 +9,9 @@ import { DOMAINS } from '../utils/constants'
 const STATUS_FILTERS = [
   { key: '', label: 'All' },
   { key: 'escalated_to_coordinator', label: 'New' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'escalated_to_principal', label: 'To Principal' },
-  { key: 'resolved', label: 'Resolved' },
+  { key: 'in_progress',              label: 'In Progress' },
+  { key: 'escalated_to_principal',   label: 'To Principal' },
+  { key: 'resolved',                 label: 'Resolved' },
 ]
 
 export default function CoordinatorDashboard() {
@@ -24,71 +24,59 @@ export default function CoordinatorDashboard() {
     .filter(c => !statusFilter || c.status === statusFilter)
     .filter(c => !domainFilter || c.domain === domainFilter)
 
-  const stats = {
-    total: complaints.length,
-    pending: complaints.filter(c => c.status === 'escalated_to_coordinator').length,
-    toPrincipal: complaints.filter(c => c.status === 'escalated_to_principal').length,
-    resolved: complaints.filter(c => c.status === 'resolved').length,
-  }
+  const stats = [
+    { label: 'Total',           value: complaints.length,                                                      color: '#1B4D2B' },
+    { label: 'Needs Attention', value: complaints.filter(c => c.status === 'escalated_to_coordinator').length, color: '#D97706' },
+    { label: 'To Principal',    value: complaints.filter(c => c.status === 'escalated_to_principal').length,   color: '#DC2626' },
+    { label: 'Resolved',        value: complaints.filter(c => c.status === 'resolved').length,                 color: '#16A34A' },
+  ]
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-gray-900">Coordinator Dashboard</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Coordinator Dashboard</h1>
           <p className="text-gray-500 text-sm">Welcome, {user?.name}</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Total', value: stats.total, color: '#003366' },
-            { label: 'Needs Attention', value: stats.pending, color: '#D97706' },
-            { label: 'To Principal', value: stats.toPrincipal, color: '#DC2626' },
-            { label: 'Resolved', value: stats.resolved, color: '#16A34A' },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
+          {stats.map(s => (
+            <div key={s.label} className="glass rounded-2xl p-4 text-center">
               <p className="text-3xl font-black" style={{ color: s.color }}>{s.value}</p>
               <p className="text-xs text-gray-500 font-medium mt-1">{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Filters */}
         <div className="flex gap-3 mb-5 flex-wrap">
           <div className="flex gap-2 overflow-x-auto">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                  statusFilter === f.key
-                    ? 'bg-[#003366] text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {f.label}
-              </button>
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
+                style={statusFilter === f.key
+                  ? { background: '#1B4D2B', color: '#fff' }
+                  : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(27,77,43,0.15)', color: '#4A7C5C' }}
+              >{f.label}</button>
             ))}
           </div>
           <select
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-1.5 text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            className="rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none"
+            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#4A7C5C' }}
           >
             <option value="">All Domains</option>
-            {Object.entries(DOMAINS).map(([k, d]) => (
-              <option key={k} value={k}>{d.icon} {d.label}</option>
-            ))}
+            {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
           </select>
         </div>
 
-        {/* List */}
         {loading ? (
           <LoadingSpinner message="Loading complaints..." />
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
+          <div className="glass rounded-2xl p-12 text-center">
             <p className="text-5xl mb-3">📭</p>
             <h3 className="font-bold text-gray-700 text-lg">No complaints match your filters</h3>
           </div>

@@ -5,8 +5,8 @@ export default function DomainBadge({ domain, size = 'sm' }) {
   const padding = size === 'lg' ? 'px-3 py-1 text-sm gap-1.5' : 'px-2 py-0.5 text-xs gap-1'
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full ${padding}`}
-      style={{ color: d.color, backgroundColor: d.bg }}
+      className={`inline-flex items-center font-semibold rounded-full ${padding}`}
+      style={{ color: d.color, backgroundColor: d.bg, border: `1px solid ${d.color}30` }}
     >
       <span>{d.icon}</span>
       <span>{d.label}</span>

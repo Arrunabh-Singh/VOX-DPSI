@@ -7,18 +7,20 @@ import { useAuth } from '../context/AuthContext'
 export default function ComplaintCard({ complaint }) {
   const navigate = useNavigate()
   const { user } = useAuth()
-
   const showStudentName = ['council_member', 'supervisor', 'principal'].includes(user?.role)
   const studentName = complaint.student?.name || 'Unknown'
 
   return (
     <div
-      className="bg-white rounded-xl border border-gray-200 hover:border-[#003366] hover:shadow-md transition-all cursor-pointer p-4"
+      className="glass rounded-2xl cursor-pointer p-4 transition-all duration-200"
+      style={{ border: '1px solid rgba(255,255,255,0.85)' }}
       onClick={() => navigate(`/complaints/${complaint.id}`)}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 32px rgba(27,77,43,0.14)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div>
-          <span className="font-mono font-bold text-[#003366] text-sm">
+          <span className="font-mono font-bold text-sm" style={{ color: '#1B4D2B' }}>
             {complaint.complaint_no_display}
           </span>
           {complaint.is_anonymous_requested && showStudentName && (
@@ -35,7 +37,7 @@ export default function ComplaintCard({ complaint }) {
       </div>
 
       {showStudentName && (
-        <p className="text-sm text-gray-700 font-medium mb-1">
+        <p className="text-sm font-medium mb-1" style={{ color: '#374151' }}>
           {studentName}
           {complaint.student?.scholar_no && (
             <span className="text-gray-400 font-normal"> · {complaint.student.scholar_no}</span>
@@ -43,9 +45,7 @@ export default function ComplaintCard({ complaint }) {
         </p>
       )}
 
-      <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-        {complaint.description}
-      </p>
+      <p className="text-sm text-gray-500 line-clamp-2 mb-3">{complaint.description}</p>
 
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>{formatIST(complaint.created_at)}</span>
