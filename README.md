@@ -1,6 +1,12 @@
 # Vox DPSI — Student Grievance Management System
 
-A full-stack institutional grievance platform for Delhi Public School Indore, built for the DPS Indore Student Council.
+> **Live URL:** https://vox-dpsi.vercel.app  
+> **Presentation:** https://vox-dpsi.vercel.app/presentation/  
+> **Version:** v2.0 — DPS Indore green design, frosted glass UI, 11-slide HTML presentation
+
+A full-stack institutional grievance platform for Delhi Public School Indore. Students raise complaints by category; council members handle them; complex issues escalate through teachers → coordinator → principal. Every action is permanently logged. An anonymity system lets students protect their identity during escalation.
+
+Built entirely by Claude (Anthropic) in a single Cowork session, commissioned by Arrunabh Singh for his Student Council Presidential interview at DPS Indore.
 
 ---
 
@@ -62,16 +68,16 @@ App runs at **http://localhost:5173**
 
 ## Demo Accounts (all password: `demo123`)
 
-| Role           | Email                  | Name                   |
-|----------------|------------------------|------------------------|
-| Student        | student@dpsi.com       | Rahul Sharma (XII B)   |
-| Council Member | council@dpsi.com       | Priya Verma            |
-| Class Teacher  | teacher@dpsi.com       | Mrs. Sharma            |
-| Coordinator    | coordinator@dpsi.com   | Mr. Kapil Sir          |
-| Principal      | principal@dpsi.com     | Mr. Parminder Chopra   |
-| Supervisor     | supervisor@dpsi.com    | Arrunabh Singh         |
+| Role           | Email                            | Name                   |
+|----------------|----------------------------------|------------------------|
+| Student        | 5001@student.dpsindore.org       | Rahul Sharma (XII B)   |
+| Council Member | 5002@student.dpsindore.org       | Priya Verma            |
+| Class Teacher  | sharma@staff.dpsindore.org       | Mrs. Sharma            |
+| Coordinator    | kapil@staff.dpsindore.org        | Mr. Kapil Sir          |
+| Principal      | principal@dpsindore.org          | Mr. Parminder Chopra   |
+| Supervisor     | 5411@student.dpsindore.org       | Arrunabh Singh         |
 
-The login screen has **quick-fill buttons** for all 6 demo accounts.
+The login screen has **quick-fill buttons** for all 6 demo accounts — no typing required for demo.
 
 ---
 
@@ -132,4 +138,36 @@ Update `CLIENT_URL` in Railway to your Vercel URL (e.g. `https://vox-dpsi.vercel
 
 ---
 
-*Built by Arrunabh Singh for the DPS Indore Student Council Presidential Interview.*
+## Design
+
+v2 uses DPS Indore's actual brand colors extracted from the school logo:
+- **Primary green:** `#1B4D2B` (shield color)
+- **Gold accent:** `#C9920A` (torch flame)
+- **Font:** Outfit (Google Fonts)
+- **Glass UI:** `backdrop-filter: blur()` throughout for frosted glass cards
+
+---
+
+## Presentation
+
+A standalone 11-slide HTML presentation lives at `client/public/presentation/index.html`.
+Open it in any browser — **no server needed**.
+
+**Keyboard controls:** `→` / `Space` = next · `←` = back · `R` = reset · `1–9` = jump to slide
+
+Slides cover: The Problem → Inspiration → What is Vox DPSI? → 6 Roles → Anonymity System → Complaint Flow → App Screens → Tech Stack → Why It Matters → Closing
+
+---
+
+## Architecture Notes
+
+- **ES Modules** (`"type": "module"`) throughout the backend — use `import`/`export`, not `require`
+- **Anonymity logic:** `is_anonymous_requested` (set by student) vs `identity_revealed` (set by council on escalation). See `server/routes/complaints.js` PATCH `/escalate` endpoint
+- **JWT payload:** `{ id, name, role, scholar_no, section, house }` — role determines dashboard routing in `client/src/App.jsx`
+- **Complaint number format:** `VOX-0001` (zero-padded 4 digits) — logic in `server/utils/complaintNo.js`
+- **Timestamps:** All displayed in IST (UTC+5:30) via `formatIST()` in `client/src/utils/formatDate.js`
+- **Supabase anon key** is safe to commit to frontend — it's public by design. The service role key in `server/.env` must never be committed.
+
+---
+
+*Built by Claude (Anthropic) for Arrunabh Singh · DPS Indore Student Council Presidential Interview · April 2026*
