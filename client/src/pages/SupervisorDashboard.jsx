@@ -36,14 +36,14 @@ export default function SupervisorDashboard() {
   }, {})
 
   const overallStats = [
-    { label: 'Total',       value: complaints.length,                                                            color: '#1B4D2B' },
+    { label: 'Total',       value: complaints.length,                                                            color: '#003366' },
     { label: 'Resolved',    value: complaints.filter(c => ['resolved','closed'].includes(c.status)).length,      color: '#16A34A' },
     { label: 'In Progress', value: complaints.filter(c => c.status === 'in_progress').length,                    color: '#4F46E5' },
     { label: 'Escalated',   value: complaints.filter(c => c.status.includes('escalated')).length,                color: '#DC2626' },
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#F0F4F8' }}>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Header card */}
@@ -77,7 +77,7 @@ export default function SupervisorDashboard() {
         {/* Breakdowns */}
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
           <div className="glass rounded-2xl p-5">
-            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#4A7C5C' }}>By House</h3>
+            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#336699' }}>By House</h3>
             <div className="space-y-2">
               {Object.entries(houseStats).length === 0
                 ? <p className="text-gray-400 text-sm">No data</p>
@@ -85,7 +85,7 @@ export default function SupervisorDashboard() {
                   <div key={house} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 font-medium">{house}</span>
                     <div className="text-right">
-                      <span className="text-sm font-bold" style={{ color: '#1B4D2B' }}>{data.total}</span>
+                      <span className="text-sm font-bold" style={{ color: '#003366' }}>{data.total}</span>
                       <span className="text-xs text-gray-400"> / {data.resolved} resolved</span>
                     </div>
                   </div>
@@ -94,7 +94,7 @@ export default function SupervisorDashboard() {
           </div>
 
           <div className="glass rounded-2xl p-5">
-            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#4A7C5C' }}>By Domain</h3>
+            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#336699' }}>By Domain</h3>
             <div className="space-y-2">
               {Object.entries(domainBreakdown).length === 0
                 ? <p className="text-gray-400 text-sm">No data</p>
@@ -111,14 +111,14 @@ export default function SupervisorDashboard() {
           </div>
 
           <div className="glass rounded-2xl p-5">
-            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#4A7C5C' }}>By Section</h3>
+            <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#336699' }}>By Section</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-hide">
               {Object.entries(sectionStats).length === 0
                 ? <p className="text-gray-400 text-sm">No data</p>
                 : Object.entries(sectionStats).sort((a, b) => b[1] - a[1]).map(([sec, count]) => (
                   <div key={sec} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 font-medium">{sec}</span>
-                    <span className="text-sm font-bold" style={{ color: '#1B4D2B' }}>{count}</span>
+                    <span className="text-sm font-bold" style={{ color: '#003366' }}>{count}</span>
                   </div>
                 ))}
             </div>
@@ -129,13 +129,13 @@ export default function SupervisorDashboard() {
         <div className="flex gap-3 mb-5 flex-wrap items-center">
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}>
+            style={{ border: '1px solid rgba(0,51,102,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}>
             <option value="">All Statuses</option>
             {Object.entries(STATUSES).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
           </select>
           <select value={domainFilter} onChange={e => setDomainFilter(e.target.value)}
             className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}>
+            style={{ border: '1px solid rgba(0,51,102,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}>
             <option value="">All Domains</option>
             {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
           </select>

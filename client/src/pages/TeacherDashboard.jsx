@@ -15,11 +15,11 @@ export default function TeacherDashboard() {
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#F0F4F8' }}>
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Class Teacher Dashboard</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#003366' }}>Class Teacher Dashboard</h1>
           <p className="text-gray-500 text-sm mt-0.5">Welcome, {user?.name} — Complaints escalated to your attention</p>
         </div>
 

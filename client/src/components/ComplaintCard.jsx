@@ -15,12 +15,12 @@ export default function ComplaintCard({ complaint }) {
       className="glass rounded-2xl cursor-pointer p-4 transition-all duration-200"
       style={{ border: '1px solid rgba(255,255,255,0.85)' }}
       onClick={() => navigate(`/complaints/${complaint.id}`)}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 32px rgba(27,77,43,0.14)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,51,102,0.14)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div>
-          <span className="font-mono font-bold text-sm" style={{ color: '#1B4D2B' }}>
+          <span className="font-mono font-bold text-sm" style={{ color: '#003366' }}>
             {complaint.complaint_no_display}
           </span>
           {complaint.is_anonymous_requested && showStudentName && (

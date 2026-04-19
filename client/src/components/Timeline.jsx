@@ -36,7 +36,7 @@ export default function Timeline({ entries = [] }) {
           <div key={entry.id} className="flex gap-4">
             <div className="flex flex-col items-center">
               <div className="w-3 h-3 rounded-full border-2 mt-1 flex-shrink-0" style={{ borderColor: colors.dot, backgroundColor: colors.dot }} />
-              {!isLast && <div className="w-0.5 flex-1 my-1" style={{ background: 'rgba(27,77,43,0.12)' }} />}
+              {!isLast && <div className="w-0.5 flex-1 my-1" style={{ background: 'rgba(0,51,102,0.12)' }} />}
             </div>
             <div className="pb-4 flex-1">
               <div className="rounded-xl p-3 border" style={{ backgroundColor: colors.bg, borderColor: colors.border + '55' }}>

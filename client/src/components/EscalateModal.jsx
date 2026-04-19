@@ -54,7 +54,7 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
     >
       <div className="glass-modal rounded-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#1B4D2B,#163D22)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#003366,#002952)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div>
             <h2 className="text-white font-bold text-lg">Escalate Complaint</h2>
             <p className="text-sm" style={{ color: '#A7C4B0' }}>{complaint?.complaint_no_display}</p>
@@ -73,7 +73,7 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
                   onClick={() => setTarget(t.value)}
                   className="w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium"
                   style={target === t.value
-                    ? { borderColor: '#1B4D2B', background: '#F0FDF4', color: '#1B4D2B' }
+                    ? { borderColor: '#003366', background: '#EEF4FF', color: '#003366' }
                     : { borderColor: '#E5E7EB', color: '#374151' }}
                 >
                   {t.label}
@@ -121,7 +121,7 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
               placeholder="Briefly explain why this complaint is being escalated..."
               className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none transition-all"
               style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.8)' }}
-              onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+              onFocus={e => e.target.style.borderColor = '#003366'}
               onBlur={e => e.target.style.borderColor = '#D1FAE5'}
             />
           </div>
@@ -139,7 +139,7 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
               onClick={handleEscalate}
               disabled={loading || !target || (showAnonymityDecision && revealIdentity === null)}
               className="flex-1 py-3 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'linear-gradient(135deg,#1B4D2B,#2A6B3F)' }}
+              style={{ background: 'linear-gradient(135deg,#003366,#004080)' }}
             >
               {loading ? 'Escalating...' : 'Confirm Escalation'}
             </button>

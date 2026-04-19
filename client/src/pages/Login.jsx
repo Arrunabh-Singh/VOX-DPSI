@@ -60,7 +60,7 @@ export default function Login() {
 
           {/* Login card — frosted glass */}
           <div className="glass-modal rounded-2xl p-8">
-            <h2 className="text-lg font-bold mb-5" style={{ color: '#1B4D2B' }}>Sign in to your account</h2>
+            <h2 className="text-lg font-bold mb-5" style={{ color: '#003366' }}>Sign in to your account</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: '#374151' }}>Email address</label>
@@ -71,7 +71,7 @@ export default function Login() {
                   placeholder="you@dpsindore.org"
                   className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all"
                   style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.7)' }}
-                  onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+                  onFocus={e => e.target.style.borderColor = '#003366'}
                   onBlur={e => e.target.style.borderColor = '#D1FAE5'}
                   required
                 />
@@ -85,7 +85,7 @@ export default function Login() {
                   placeholder="••••••••"
                   className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all"
                   style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.7)' }}
-                  onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+                  onFocus={e => e.target.style.borderColor = '#003366'}
                   onBlur={e => e.target.style.borderColor = '#D1FAE5'}
                   required
                 />
@@ -94,7 +94,7 @@ export default function Login() {
                 type="submit"
                 disabled={loading}
                 className="w-full text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-                style={{ background: 'linear-gradient(135deg,#1B4D2B,#2A6B3F)', boxShadow: '0 4px 16px rgba(27,77,43,0.3)' }}
+                style={{ background: 'linear-gradient(135deg,#003366,#004080)', boxShadow: '0 4px 16px rgba(0,51,102,0.3)' }}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -114,9 +114,9 @@ export default function Login() {
                     key={a.email}
                     onClick={() => { setEmail(a.email); setPassword('demo123') }}
                     className="text-xs py-1.5 px-2 rounded-lg font-medium transition-colors"
-                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' }}
+                    style={{ background: '#EEF4FF', border: '1px solid #BBF7D0', color: '#166534' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#DCFCE7'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#F0FDF4'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#EEF4FF'}
                   >
                     {a.label}
                   </button>
@@ -126,7 +126,7 @@ export default function Login() {
             </div>
           </div>
 
-          <p className="text-center text-xs mt-6" style={{ color: '#4A7C5C' }}>
+          <p className="text-center text-xs mt-6" style={{ color: '#336699' }}>
             Powered by DPS Indore Student Council
           </p>
         </div>

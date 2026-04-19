@@ -13,7 +13,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 shadow-lg" style={{ background: 'rgba(22,61,34,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+    <header className="sticky top-0 z-50 shadow-lg" style={{ background: 'rgba(0,40,80,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="cursor-pointer" onClick={() => navigate('/')}>

@@ -17,13 +17,14 @@ ALTER SEQUENCE complaints_complaint_no_seq RESTART WITH 1;
 -- ── USERS ─────────────────────────────────────────────────────────────────────
 -- All passwords: demo123
 INSERT INTO users (id, name, email, password_hash, role, scholar_no, section, house) VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Rahul Sharma',        '5001@student.dpsindore.org',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'student',        '5001', 'XII B', 'Prithvi'),
-  ('22222222-2222-2222-2222-222222222222', 'Priya Verma',         '5002@student.dpsindore.org',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'council_member', '5002', 'XII A', 'Agni'),
-  ('33333333-3333-3333-3333-333333333333', 'Mrs. Sharma',         'sharma@staff.dpsindore.org',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'class_teacher',  NULL,   'XII B', NULL),
-  ('44444444-4444-4444-4444-444444444444', 'Mr. Kapil Sir',       'kapil@staff.dpsindore.org',   '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'coordinator',    NULL,   NULL,   NULL),
-  ('55555555-5555-5555-5555-555555555555', 'Mr. Parminder Chopra','principal@dpsindore.org',     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'principal',      NULL,   NULL,   NULL),
-  ('66666666-6666-6666-6666-666666666666', 'Arrunabh Singh',      '5411@student.dpsindore.org',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'supervisor',     '5411', 'XII B', 'Prithvi'),
-  ('77777777-7777-7777-7777-777777777777', 'Aisha Khan',          'aisha@student.dpsindore.org', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'student',        '5003', 'XII A', 'Agni');
+  ('11111111-1111-1111-1111-111111111111', 'Rahul Sharma',        '5001@student.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'student',        '5001', 'XII B', 'Prithvi'),
+  ('22222222-2222-2222-2222-222222222222', 'Priya Verma',         '5002@student.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'council_member', '5002', 'XII A', 'Agni'),
+  ('33333333-3333-3333-3333-333333333333', 'Mrs. Sharma',         'sharma@staff.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'class_teacher',  NULL,   'XII B', NULL),
+  ('44444444-4444-4444-4444-444444444444', 'Mr. Kapil Sir',       'kapil@staff.dpsindore.org',   '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'coordinator',    NULL,   NULL,   NULL),
+  ('55555555-5555-5555-5555-555555555555', 'Mr. Parminder Chopra','principal@dpsindore.org',     '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'principal',      NULL,   NULL,   NULL),
+  ('66666666-6666-6666-6666-666666666666', 'Arrunabh Singh',      '5411@student.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5411', 'XII B', 'Prithvi'),
+  ('77777777-7777-7777-7777-777777777777', 'Aisha Khan',          'aisha@student.dpsindore.org', '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'student',        '5003', 'XII A', 'Agni'),
+  ('88888888-8888-8888-8888-888888888888', 'Dr. Meena Sharma',    'vp@dpsindore.org',            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'vice_principal', NULL,   NULL,   NULL);
 
 -- ── SAMPLE COMPLAINTS ─────────────────────────────────────────────────────────
 INSERT INTO complaints (id, complaint_no, student_id, domain, description, is_anonymous_requested, identity_revealed, status, assigned_council_member_id, current_handler_role) VALUES

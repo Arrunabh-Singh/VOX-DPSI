@@ -27,7 +27,7 @@ const ROLE_DASHBOARDS = {
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F4F8' }}>
       <LoadingSpinner message="Authenticating..." />
     </div>
   )
@@ -56,10 +56,10 @@ export default function App() {
               fontSize: '14px',
               background: 'rgba(255,255,255,0.95)',
               backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(27,77,43,0.1)',
-              boxShadow: '0 8px 32px rgba(27,77,43,0.12)',
+              border: '1px solid rgba(0,51,102,0.1)',
+              boxShadow: '0 8px 32px rgba(0,51,102,0.12)',
             },
-            success: { iconTheme: { primary: '#1B4D2B', secondary: '#fff' } },
+            success: { iconTheme: { primary: '#003366', secondary: '#fff' } },
             error:   { iconTheme: { primary: '#DC2626', secondary: '#fff' } },
           }}
         />

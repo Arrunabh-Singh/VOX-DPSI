@@ -7,7 +7,7 @@ const router = express.Router()
 
 // Helper: determine if student identity should be hidden for this role
 function shouldHideStudentIdentity(complaint, requestingRole) {
-  if (['student', 'council_member', 'supervisor', 'principal'].includes(requestingRole)) {
+  if (['student', 'council_member', 'supervisor', 'principal', 'vice_principal'].includes(requestingRole)) {
     return false // these roles can always see or are handled separately
   }
   // For class_teacher and coordinator: check if identity was revealed in escalation
@@ -100,7 +100,7 @@ router.get('/', verifyToken, async (req, res) => {
       // Show complaints at coordinator level, plus ones they escalated to principal
       query = query.in('current_handler_role', ['coordinator', 'principal'])
     }
-    // principal and supervisor see all
+    // principal, vice_principal, and supervisor see all
 
     const { data: complaints, error } = await query
     if (error) throw error
@@ -112,6 +112,7 @@ router.get('/', verifyToken, async (req, res) => {
       }
 
       // Anonymity: hide student info from teacher/coordinator if not revealed
+      // principal and vice_principal always see full identity
       if (['class_teacher', 'coordinator'].includes(role) && c.is_anonymous_requested && !c.identity_revealed) {
         result.student = { id: null, name: 'Anonymous Student', scholar_no: null, section: null }
       }
@@ -157,7 +158,7 @@ router.get('/:id', verifyToken, async (req, res) => {
       complaint_no_display: formatComplaintNo(complaint.complaint_no),
     }
 
-    // Apply anonymity for teacher/coordinator
+    // Apply anonymity for teacher/coordinator (principal and vice_principal always see full identity)
     if (['class_teacher', 'coordinator'].includes(role) && complaint.is_anonymous_requested && !complaint.identity_revealed) {
       result.student = { id: null, name: 'Anonymous Student', scholar_no: null, section: null, house: null }
     }
@@ -250,7 +251,7 @@ router.patch('/:id/resolve', verifyToken, async (req, res) => {
     const { note } = req.body
     const { role, id: userId } = req.user
 
-    const allowedRoles = ['council_member', 'class_teacher', 'coordinator', 'principal']
+    const allowedRoles = ['council_member', 'class_teacher', 'coordinator', 'principal', 'vice_principal']
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({ error: 'Not allowed' })
     }

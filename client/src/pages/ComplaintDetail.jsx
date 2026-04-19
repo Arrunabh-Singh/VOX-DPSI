@@ -14,7 +14,7 @@ import api from '../utils/api'
 import toast from 'react-hot-toast'
 
 const actionBtn = (style = 'primary') => ({
-  primary:   { background: 'linear-gradient(135deg,#1B4D2B,#2A6B3F)', color: '#fff' },
+  primary:   { background: 'linear-gradient(135deg,#003366,#004080)', color: '#fff' },
   blue:      { background: '#2563EB', color: '#fff' },
   indigo:    { background: '#4F46E5', color: '#fff' },
   green:     { background: '#16A34A', color: '#fff' },
@@ -58,8 +58,8 @@ export default function ComplaintDetail() {
     }
   }
 
-  if (loading) return <div className="min-h-screen" style={{ background: '#EEF2EC' }}><Navbar /><LoadingSpinner message="Loading complaint..." /></div>
-  if (!complaint) return <div className="min-h-screen" style={{ background: '#EEF2EC' }}><Navbar /><div className="text-center py-20 text-gray-500">Complaint not found.</div></div>
+  if (loading) return <div className="min-h-screen" style={{ background: '#F0F4F8' }}><Navbar /><LoadingSpinner message="Loading complaint..." /></div>
+  if (!complaint) return <div className="min-h-screen" style={{ background: '#F0F4F8' }}><Navbar /><div className="text-center py-20 text-gray-500">Complaint not found.</div></div>
 
   const role = user?.role
   const isCouncil = role === 'council_member'
@@ -82,7 +82,7 @@ export default function ComplaintDetail() {
     : complaint.student?.name
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#F0F4F8' }}>
       <Navbar />
       {showEscalate && (
         <EscalateModal complaint={complaint} userRole={role} onClose={() => setShowEscalate(false)} onSuccess={refetch} />
@@ -92,7 +92,7 @@ export default function ComplaintDetail() {
         <button
           onClick={() => navigate(-1)}
           className="px-3 py-2 rounded-xl transition-colors text-sm font-medium mb-5 flex items-center gap-1"
-          style={{ color: '#1B4D2B' }}
+          style={{ color: '#003366' }}
           onMouseEnter={e => e.currentTarget.style.background = '#DCFCE7'}
           onMouseLeave={e => e.currentTarget.style.background = ''}
         >← Back</button>
@@ -104,7 +104,7 @@ export default function ComplaintDetail() {
             <div className="glass rounded-2xl p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className="font-mono font-black text-2xl" style={{ color: '#1B4D2B' }}>
+                  <span className="font-mono font-black text-2xl" style={{ color: '#003366' }}>
                     {complaint.complaint_no_display}
                   </span>
                   <div className="flex items-center gap-2 mt-2">
@@ -117,7 +117,7 @@ export default function ComplaintDetail() {
                 <StatusPill status={complaint.status} size="lg" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm pt-4" style={{ borderTop: '1px solid rgba(27,77,43,0.1)' }}>
+              <div className="grid grid-cols-2 gap-4 text-sm pt-4" style={{ borderTop: '1px solid rgba(0,51,102,0.1)' }}>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Raised On</p>
                   <p className="font-medium text-gray-700 mt-0.5">{formatIST(complaint.created_at)}</p>
@@ -144,13 +144,13 @@ export default function ComplaintDetail() {
 
             {/* Description */}
             <div className="glass rounded-2xl p-6">
-              <h3 className="font-bold mb-3" style={{ color: '#1B4D2B' }}>Description</h3>
+              <h3 className="font-bold mb-3" style={{ color: '#003366' }}>Description</h3>
               <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{complaint.description}</p>
               {complaint.attachment_url && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(27,77,43,0.1)' }}>
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(0,51,102,0.1)' }}>
                   <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Attachment</p>
                   <a href={complaint.attachment_url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#1B4D2B' }}>
+                    className="inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#003366' }}>
                     📎 View Attachment
                   </a>
                 </div>
@@ -159,11 +159,11 @@ export default function ComplaintDetail() {
 
             {/* Timeline */}
             <div className="glass rounded-2xl p-6">
-              <h3 className="font-bold mb-4" style={{ color: '#1B4D2B' }}>Activity Timeline</h3>
+              <h3 className="font-bold mb-4" style={{ color: '#003366' }}>Activity Timeline</h3>
               <Timeline entries={timeline} />
               {canAddNote && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(27,77,43,0.1)' }}>
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A7C5C' }}>Add a Note</label>
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(0,51,102,0.1)' }}>
+                  <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#336699' }}>Add a Note</label>
                   <div className="flex gap-2">
                     <input
                       value={noteText}
@@ -171,7 +171,7 @@ export default function ComplaintDetail() {
                       placeholder="Add an update or note..."
                       className="flex-1 rounded-xl px-3 py-2 text-sm focus:outline-none transition-all"
                       style={{ border: '1.5px solid #D1FAE5', background: 'rgba(255,255,255,0.7)' }}
-                      onFocus={e => e.target.style.borderColor = '#1B4D2B'}
+                      onFocus={e => e.target.style.borderColor = '#003366'}
                       onBlur={e => e.target.style.borderColor = '#D1FAE5'}
                       onKeyDown={e => e.key === 'Enter' && addNote()}
                     />
@@ -179,7 +179,7 @@ export default function ComplaintDetail() {
                       onClick={addNote}
                       disabled={actionLoading}
                       className="px-4 py-2 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#1B4D2B,#2A6B3F)' }}
+                      style={{ background: 'linear-gradient(135deg,#003366,#004080)' }}
                     >Add</button>
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export default function ComplaintDetail() {
           <div className="space-y-4">
             {(canVerify || canMarkInProgress || canResolve || canEscalate) && (
               <div className="glass rounded-2xl p-5">
-                <h3 className="font-bold mb-4" style={{ color: '#1B4D2B' }}>Actions</h3>
+                <h3 className="font-bold mb-4" style={{ color: '#003366' }}>Actions</h3>
                 <div className="space-y-2">
                   {canVerify && (
                     <button onClick={() => doAction('verify', { note: 'Verified the complaint in person.' })} disabled={actionLoading}

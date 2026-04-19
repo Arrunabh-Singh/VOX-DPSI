@@ -12,7 +12,7 @@ export default function StudentDashboard() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#F0F4F8' }}>
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
 
@@ -39,7 +39,7 @@ export default function StudentDashboard() {
         <button
           onClick={() => navigate('/raise')}
           className="w-full font-black text-lg py-5 rounded-2xl mb-6 flex items-center justify-center gap-3 transition-all"
-          style={{ background: 'linear-gradient(135deg,#C9920A,#F0B429)', color: '#1B4D2B', boxShadow: '0 8px 24px rgba(201,146,10,0.3)' }}
+          style={{ background: 'linear-gradient(135deg,#C9920A,#F0B429)', color: '#003366', boxShadow: '0 8px 24px rgba(201,146,10,0.3)' }}
           onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
           onMouseLeave={e => e.currentTarget.style.transform = ''}
         >
@@ -49,7 +49,7 @@ export default function StudentDashboard() {
 
         {/* Complaints list header */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold" style={{ color: '#1B4D2B' }}>My Complaints</h2>
+          <h2 className="text-lg font-bold" style={{ color: '#003366' }}>My Complaints</h2>
           <span className="text-sm text-gray-500">{complaints.length} total</span>
         </div>
 
@@ -69,7 +69,7 @@ export default function StudentDashboard() {
 
         {/* Status legend */}
         <div className="mt-8 glass rounded-2xl p-5">
-          <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#4A7C5C' }}>Status Guide</h3>
+          <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#336699' }}>Status Guide</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {Object.entries(STATUSES).map(([key, val]) => (
               <div key={key} className="flex items-center gap-2">
