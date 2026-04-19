@@ -5,9 +5,9 @@ export function VoxMark({ size = 40 }) {
   return (
     <svg width={size} height={h} viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Shield outer */}
-      <path d="M20 2L37 8.5V23C37 34 29 41.5 20 43.5C11 41.5 3 34 3 23V8.5L20 2Z" fill="#003366"/>
+      <path d="M20 2L37 8.5V23C37 34 29 41.5 20 43.5C11 41.5 3 34 3 23V8.5L20 2Z" fill="#1B4D2B"/>
       {/* Shield inner */}
-      <path d="M20 5.5L34 11V23C34 32.5 27.5 39.5 20 41C12.5 39.5 6 32.5 6 23V11L20 5.5Z" fill="#002952"/>
+      <path d="M20 5.5L34 11V23C34 32.5 27.5 39.5 20 41C12.5 39.5 6 32.5 6 23V11L20 5.5Z" fill="#163D22"/>
       {/* Microphone capsule */}
       <rect x="16.5" y="12" width="7" height="10" rx="3.5" fill="#C9920A"/>
       {/* Microphone highlight */}
@@ -23,7 +23,7 @@ export function VoxMark({ size = 40 }) {
 }
 
 export function VoxWordmark({ light = false, size = 'md' }) {
-  const color = light ? '#FFFFFF' : '#003366'
+  const color = light ? '#FFFFFF' : '#1B4D2B'
   const s = { sm: [28, 18], md: [36, 22], lg: [48, 30] }[size] || [36, 22]
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

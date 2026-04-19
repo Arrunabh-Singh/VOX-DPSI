@@ -43,10 +43,7 @@ export default function FileUpload({ onUpload, label = 'Attach File' }) {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl text-sm transition-all disabled:opacity-50 w-full"
-        style={{ borderColor: '#D1FAE5', color: '#336699', background: 'rgba(255,255,255,0.5)' }}
-        onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = '#003366'; e.currentTarget.style.color = '#003366' } }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1FAE5'; e.currentTarget.style.color = '#336699' }}
+        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#003366] hover:text-[#003366] transition-all disabled:opacity-50"
       >
         {uploading ? (
           <>

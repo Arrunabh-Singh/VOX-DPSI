@@ -40,19 +40,19 @@ export default function PrincipalDashboard() {
   }
 
   const statCards = [
-    { label: 'Total Raised', value: stats.total,       color: '#003366' },
+    { label: 'Total Raised', value: stats.total,       color: '#1B4D2B' },
     { label: 'Resolved',     value: stats.resolved,    color: '#16A34A' },
     { label: 'Pending',      value: stats.pending,     color: '#D97706' },
     { label: 'To Principal', value: stats.toPrincipal, color: '#DC2626' },
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: '#F0F4F8' }}>
+    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black" style={{ color: '#003366' }}>Principal's Dashboard</h1>
+            <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Principal's Dashboard</h1>
             <p className="text-gray-500 text-sm">Full system overview — {user?.name}</p>
           </div>
           <button
@@ -77,7 +77,7 @@ export default function PrincipalDashboard() {
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(0,51,102,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}
+            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}
           >
             <option value="">All Statuses</option>
             {Object.entries(STATUSES).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
@@ -86,7 +86,7 @@ export default function PrincipalDashboard() {
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
             className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(0,51,102,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}
+            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#374151' }}
           >
             <option value="">All Domains</option>
             {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}

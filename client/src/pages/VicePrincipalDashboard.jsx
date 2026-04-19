@@ -81,7 +81,7 @@ export default function VicePrincipalDashboard() {
                 <button
                   onClick={handleResolve}
                   disabled={actionLoading}
-                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50" style={{ background: '#003366' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#003366'}
                 >
                   {actionLoading ? 'Resolving...' : 'Confirm Resolve'}
                 </button>
@@ -173,7 +173,7 @@ export default function VicePrincipalDashboard() {
                   <div className="px-4 pb-4 -mt-1">
                     <button
                       onClick={e => { e.stopPropagation(); setResolveId(c.id); setResolveNote('') }}
-                      className="w-full py-2 bg-green-600 text-white rounded-xl text-xs font-semibold hover:bg-green-700 transition-colors"
+                      className="w-full py-2 text-white rounded-xl text-xs font-semibold transition-colors" style={{ background: '#003366' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#003366'}
                     >
                       ✅ Resolve
                     </button>

@@ -29,13 +29,13 @@ export const ROLES = {
 }
 
 export const COLORS = {
-  green:         '#003366',
-  greenHover:    '#002952',
-  greenLight:    '#004080',
+  green:         '#1B4D2B',
+  greenHover:    '#163D22',
+  greenLight:    '#2A6B3F',
   gold:          '#C9920A',
   goldLight:     '#F0B429',
   white:         '#FFFFFF',
-  surface:       '#F0F4F8',
+  surface:       '#EEF2EC',
   textPrimary:   '#1A1A1A',
   textSecondary: '#6B7280',
   success:       '#16A34A',
