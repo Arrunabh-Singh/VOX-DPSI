@@ -13,19 +13,35 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 shadow-lg" style={{ background: 'rgba(22,61,34,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+    <header className="sticky top-0 z-50 shadow-lg" style={{ background: 'rgba(0,51,102,0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,215,0,0.15)' }}>
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="cursor-pointer" onClick={() => navigate('/')}>
           <VoxWordmark light size="sm" />
         </div>
 
-        {/* User Info */}
+        {/* Right side */}
         {user && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Alpha Badge */}
+            <span style={{
+              background: '#1a1a1a',
+              border: '0.5px solid #FFD700',
+              color: '#FFD700',
+              fontSize: '10px',
+              fontWeight: '600',
+              padding: '2px 8px',
+              borderRadius: '20px',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>
+              Alpha v0.1
+            </span>
+
+            {/* User Info */}
             <div className="text-right hidden sm:block">
               <p className="font-semibold text-sm text-white leading-tight">{user.name}</p>
-              <p className="text-xs font-medium" style={{ color: '#F0B429' }}>
+              <p className="text-xs font-medium" style={{ color: '#FFD700' }}>
                 {ROLES[user.role] || user.role}
                 {user.scholar_no && ` · ${user.scholar_no}`}
               </p>

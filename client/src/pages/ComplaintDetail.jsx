@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useComplaint } from '../hooks/useComplaints'
@@ -28,6 +28,14 @@ export default function ComplaintDetail() {
   const { complaint, timeline, loading, refetch } = useComplaint(id)
   const [showEscalate, setShowEscalate] = useState(false)
   const [noteText, setNoteText] = useState('')
+
+  useEffect(() => {
+    if (complaint?.complaint_no) {
+      document.title = `VOX-${String(complaint.complaint_no).padStart(3,'0')} — Vox DPSI`
+    } else {
+      document.title = 'Complaint — Vox DPSI'
+    }
+  }, [complaint])
   const [actionLoading, setActionLoading] = useState(false)
 
   const doAction = async (type, payload = {}) => {

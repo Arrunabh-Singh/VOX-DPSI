@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useComplaints } from '../hooks/useComplaints'
@@ -10,6 +11,8 @@ export default function StudentDashboard() {
   const { user } = useAuth()
   const { complaints, loading } = useComplaints()
   const navigate = useNavigate()
+
+  useEffect(() => { document.title = 'My Complaints — Vox DPSI' }, [])
 
   return (
     <div className="min-h-screen" style={{ background: '#EEF2EC' }}>

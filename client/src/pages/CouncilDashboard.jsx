@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useComplaints } from '../hooks/useComplaints'
 import Navbar from '../components/Navbar'
@@ -25,6 +25,7 @@ export default function CouncilDashboard() {
   const { user } = useAuth()
   const { complaints, loading } = useComplaints()
   const [filter, setFilter] = useState('')
+  useEffect(() => { document.title = 'Council — Vox DPSI' }, [])
 
   const filtered = filter ? complaints.filter(c => c.status === filter) : complaints
   const stats = {

@@ -1,9 +1,9 @@
 export const DOMAINS = {
-  academics:      { label: 'Academics',       icon: '📚', color: '#2563EB', bg: '#EFF6FF' },
-  infrastructure: { label: 'Infrastructure',  icon: '🏗️', color: '#EA580C', bg: '#FFF7ED' },
-  safety:         { label: 'Safety',          icon: '🛡️', color: '#DC2626', bg: '#FEF2F2' },
-  personal:       { label: 'Personal',        icon: '👤', color: '#7C3AED', bg: '#F5F3FF' },
-  behaviour:      { label: 'Behaviour',       icon: '⚠️', color: '#D97706', bg: '#FFFBEB' },
+  academics:      { label: 'Academics',       icon: '📚', color: '#3B82F6', bg: '#EFF6FF' },
+  infrastructure: { label: 'Infrastructure',  icon: '🏗️', color: '#F97316', bg: '#FFF7ED' },
+  safety:         { label: 'Safety',          icon: '🛡️', color: '#EF4444', bg: '#FEF2F2' },
+  personal:       { label: 'Personal',        icon: '👤', color: '#8B5CF6', bg: '#F5F3FF' },
+  behaviour:      { label: 'Behaviour',       icon: '⚠️', color: '#EAB308', bg: '#FEFCE8' },
   other:          { label: 'Other',           icon: '📋', color: '#6B7280', bg: '#F9FAFB' },
 }
 
@@ -19,26 +19,23 @@ export const STATUSES = {
 }
 
 export const ROLES = {
-  student:        'Student',
-  council_member: 'Council Member',
-  class_teacher:  'Class Teacher',
-  coordinator:    'Coordinator',
-  principal:      'Principal',
-  supervisor:     'Supervisor',
-  vice_principal: 'Vice Principal',
+  student:         'Student',
+  council_member:  'Council Member',
+  class_teacher:   'Class Teacher',
+  coordinator:     'Coordinator',
+  principal:       'Principal',
+  supervisor:      'Supervisor',
+  vice_principal:  'Vice Principal',
 }
 
 export const COLORS = {
-  green:         '#1B4D2B',
-  greenHover:    '#163D22',
-  greenLight:    '#2A6B3F',
-  gold:          '#C9920A',
-  goldLight:     '#F0B429',
-  white:         '#FFFFFF',
-  surface:       '#EEF2EC',
+  navy:    '#003366',
+  gold:    '#FFD700',
+  white:   '#FFFFFF',
+  surface: '#F5F7FA',
   textPrimary:   '#1A1A1A',
   textSecondary: '#6B7280',
-  success:       '#16A34A',
-  warning:       '#D97706',
-  danger:        '#DC2626',
+  success: '#16A34A',
+  warning: '#D97706',
+  danger:  '#DC2626',
 }

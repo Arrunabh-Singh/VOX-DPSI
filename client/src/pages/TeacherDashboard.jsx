@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
@@ -7,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 export default function TeacherDashboard() {
   const { user } = useAuth()
   const { complaints, loading } = useComplaints()
+  useEffect(() => { document.title = 'Teacher — Vox DPSI' }, [])
 
   const stats = [
     { label: 'Escalated to You', value: complaints.length,                                        color: '#EA580C' },

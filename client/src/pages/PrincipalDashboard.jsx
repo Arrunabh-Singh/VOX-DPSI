@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
@@ -11,6 +11,7 @@ export default function PrincipalDashboard() {
   const { complaints, loading } = useComplaints()
   const [statusFilter, setStatusFilter] = useState('')
   const [domainFilter, setDomainFilter] = useState('')
+  useEffect(() => { document.title = 'Principal Overview — Vox DPSI' }, [])
 
   const filtered = complaints
     .filter(c => !statusFilter || c.status === statusFilter)

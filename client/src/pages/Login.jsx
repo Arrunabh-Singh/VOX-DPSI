@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
@@ -19,6 +19,7 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
   const { login }   = useAuth()
   const navigate    = useNavigate()
+  useEffect(() => { document.title = 'Vox DPSI | DPS Indore' }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

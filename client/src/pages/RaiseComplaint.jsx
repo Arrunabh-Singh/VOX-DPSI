@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import FileUpload from '../components/FileUpload'
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 
 export default function RaiseComplaint() {
   const navigate = useNavigate()
+  useEffect(() => { document.title = 'Raise a Complaint — Vox DPSI' }, [])
   const [domain, setDomain]           = useState('')
   const [description, setDescription] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
