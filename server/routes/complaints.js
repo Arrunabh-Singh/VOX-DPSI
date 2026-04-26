@@ -3,7 +3,12 @@ import supabase from '../db/supabase.js'
 import { verifyToken } from '../middleware/auth.js'
 import { formatComplaintNo } from '../utils/complaintNo.js'
 import { detectUrgency } from '../utils/keywords.js'
-import { createNotification, notifyStatusChange, notifyAssignment } from '../services/notifications.js'
+import {
+  notifyStatusChange,
+  notifyAssignment,
+  notifyComplaintCreated,
+  notifyEscalation,
+} from '../services/notifications.js'
 
 const router = express.Router()
 
@@ -104,6 +109,9 @@ router.post('/', verifyToken, async (req, res) => {
     if (assigned) {
       notifyAssignment(assigned, formatComplaintNo(complaint.complaint_no), domain, complaint.id)
     }
+
+    // Notify student that complaint was received
+    notifyComplaintCreated(req.user.id, formatComplaintNo(complaint.complaint_no), domain, complaint.id)
 
     res.status(201).json({
       ...complaint,
@@ -281,6 +289,9 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       note: note || null,
     })
 
+    // Notify student of the status change
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), 'previous', status, id)
+
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
     res.status(500).json({ error: 'Status update failed' })
@@ -391,6 +402,16 @@ router.patch('/:id/escalate', verifyToken, async (req, res) => {
 
     // Notify student of escalation
     notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), data.status, escalate_to, id)
+
+    // Notify all handlers of the target role (in-app + WhatsApp)
+    const targetRole = handlerRoleMap[escalate_to]
+    supabase.from('users').select('id').eq('role', targetRole).then(({ data: handlers }) => {
+      if (handlers && handlers.length > 0) {
+        handlers.forEach(h => {
+          notifyEscalation(h.id, formatComplaintNo(data.complaint_no), targetRole, id)
+        })
+      }
+    })
 
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {

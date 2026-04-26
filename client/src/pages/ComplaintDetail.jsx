@@ -29,6 +29,8 @@ export default function ComplaintDetail() {
   const [noteText, setNoteText] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [deletionPending, setDeletionPending] = useState(false)
+  const [showResolveInput, setShowResolveInput] = useState(false)
+  const [resolveNote, setResolveNote] = useState('')
 
   useEffect(() => {
     if (complaint?.complaint_no) {
@@ -127,8 +129,9 @@ export default function ComplaintDetail() {
         <AppealModal complaintId={id} onClose={() => setShowAppeal(false)} onSuccess={refetch} />
       )}
       {showDeleteRequest && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="glass-modal rounded-2xl p-6 w-full" style={{ maxWidth: '480px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}
+          className="sm:items-center sm:p-4" onClick={e => e.target === e.currentTarget && setShowDeleteRequest(false)}>
+          <div className="glass-modal p-6 w-full rounded-t-2xl sm:rounded-2xl" style={{ maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="font-black text-lg" style={{ color: '#DC2626' }}>🗑️ Flag as Gibberish</h2>
@@ -351,11 +354,31 @@ export default function ComplaintDetail() {
                       className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"
                       style={actionBtnStyle('indigo')}>🔄 Mark as In Progress</button>
                   )}
-                  {canResolve && !['resolved', 'closed'].includes(complaint.status) && (
-                    <button onClick={() => { const note = window.prompt('Resolution note (optional):'); doAction('resolve', { note: note || 'Complaint resolved.' }) }}
-                      disabled={actionLoading}
+                  {canResolve && !['resolved', 'closed'].includes(complaint.status) && !showResolveInput && (
+                    <button onClick={() => setShowResolveInput(true)} disabled={actionLoading}
                       className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"
                       style={actionBtnStyle('green')}>✅ Mark as Resolved</button>
+                  )}
+                  {showResolveInput && (
+                    <div className="rounded-xl p-3 space-y-2" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                      <p className="text-xs font-semibold text-green-700">Resolution note (optional)</p>
+                      <textarea
+                        value={resolveNote}
+                        onChange={e => setResolveNote(e.target.value)}
+                        rows={2}
+                        placeholder="Brief note on how it was resolved..."
+                        className="w-full rounded-lg px-3 py-2 text-sm resize-none focus:outline-none"
+                        style={{ border: '1px solid #BBF7D0', background: '#fff' }}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowResolveInput(false)}
+                          className="flex-1 py-2 rounded-lg text-sm font-semibold text-gray-500 border border-gray-200 bg-white">Cancel</button>
+                        <button onClick={() => { doAction('resolve', { note: resolveNote || 'Complaint resolved.' }); setShowResolveInput(false) }}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                          style={{ background: '#16A34A' }}>Confirm</button>
+                      </div>
+                    </div>
                   )}
                   {canEscalate && (
                     <button onClick={() => setShowEscalate(true)} disabled={actionLoading}

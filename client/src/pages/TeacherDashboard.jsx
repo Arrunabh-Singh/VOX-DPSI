@@ -26,7 +26,7 @@ export default function TeacherDashboard() {
           <p className="text-gray-500 text-sm mt-0.5">Welcome, {user?.name} — Complaints escalated to your attention</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {stats.map(s => (
             <div key={s.label} className="glass rounded-2xl p-4 text-center">
               <p className="text-3xl font-black" style={{ color: s.color }}>{s.value}</p>

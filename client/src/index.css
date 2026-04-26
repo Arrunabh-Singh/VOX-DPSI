@@ -29,7 +29,19 @@
     -moz-osx-font-smoothing: grayscale;
     color: var(--color-text);
     background-color: var(--color-bg);
+    /* iOS safe area support */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Improve tap response on iOS */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Prevent iOS text size adjustment on rotation */
+  html { -webkit-text-size-adjust: 100%; }
 }
 
 @layer utilities {
@@ -105,6 +117,43 @@
   }
 
   .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Mobile touch targets — minimum 44×44px for iOS HIG compliance */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Modal sheet — bottom sheet on mobile, centered modal on larger screens */
+  @media (max-width: 640px) {
+    .modal-sheet {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      transform: none !important;
+      border-radius: 20px 20px 0 0 !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Horizontal scroll pills for tabs/filters */
+    .scroll-x-mobile {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+    .scroll-x-mobile::-webkit-scrollbar { display: none; }
+    .scroll-x-mobile > * { flex-shrink: 0; }
+  }
 
   /* Notification pulse animation */
   @keyframes notif-pulse {

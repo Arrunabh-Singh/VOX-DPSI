@@ -315,16 +315,16 @@ export default function SupervisorDashboard() {
           </div>
         </div>
 
-        {/* Tab nav */}
-        <div className="flex gap-2 mb-5 flex-wrap">
+        {/* Tab nav — scrolls horizontally on mobile */}
+        <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
           {[
-            ['complaints', 'All Complaints'],
-            ['appeals', `Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`],
-            ['deletions', `Deletion Requests${deletions.filter(d=>d.status==='pending').length > 0 ? ` (${deletions.filter(d=>d.status==='pending').length})` : ''}`],
-            ['analytics', 'Analytics'],
+            ['complaints', '📋 Complaints'],
+            ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`],
+            ['deletions', `🗑️ Deletions${deletions.filter(d=>d.status==='pending').length > 0 ? ` (${deletions.filter(d=>d.status==='pending').length})` : ''}`],
+            ['analytics', '📊 Analytics'],
           ].map(([tab, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+              className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0"
               style={activeTab === tab
                 ? { background: '#2d5c26', color: '#c9a84c' }
                 : { background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}>

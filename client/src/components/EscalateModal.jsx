@@ -48,11 +48,11 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(10,25,15,0.65)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="glass-modal rounded-2xl w-full max-w-md overflow-hidden">
+      <div className="glass-modal w-full sm:max-w-md overflow-hidden sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#1B4D2B,#163D22)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div>

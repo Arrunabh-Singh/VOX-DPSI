@@ -14,6 +14,7 @@ import cron from 'node-cron'
 import supabase from '../db/supabase.js'
 import { formatComplaintNo } from '../utils/complaintNo.js'
 import { notifyAutoEscalation } from '../services/whatsapp.js'
+import { notifyAutoEscalationEvent, notifyStatusChange } from '../services/notifications.js'
 
 const AUTO_ESCALATE_AFTER_HOURS = 72
 
@@ -86,16 +87,37 @@ export function startAutoEscalateCron() {
             reason: `Auto-escalated after ${hoursOld}h of inactivity`,
           })
 
-          // WhatsApp notify supervisor (if env configured)
+          // Notify student of auto-escalation (in-app + WhatsApp)
+          notifyStatusChange(
+            complaint.student_id,
+            complaintNo,
+            'in_progress',
+            'escalated_to_coordinator',
+            complaint.id
+          )
+
+          // Notify all supervisors (in-app + WhatsApp)
           const { data: supervisors } = await supabase
             .from('users')
-            .select('phone')
+            .select('id, phone')
             .eq('role', 'supervisor')
-            .not('phone', 'is', null)
 
           if (supervisors) {
             for (const sup of supervisors) {
-              notifyAutoEscalation(sup.phone, complaintNo, hoursOld)
+              notifyAutoEscalationEvent(sup.id, complaintNo, hoursOld, complaint.id)
+              if (sup.phone) notifyAutoEscalation(sup.phone, complaintNo, hoursOld)
+            }
+          }
+
+          // Notify all coordinators (in-app)
+          const { data: coordinators } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'coordinator')
+
+          if (coordinators) {
+            for (const coord of coordinators) {
+              notifyAutoEscalationEvent(coord.id, complaintNo, hoursOld, complaint.id)
             }
           }
 

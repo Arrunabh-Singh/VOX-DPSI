@@ -128,8 +128,9 @@ export default function NotificationBell() {
         <div
           className="animate-slide-down"
           style={{
-            position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-            width: '360px', maxHeight: '480px',
+            position: 'fixed', top: '60px', right: '8px', left: '8px',
+            maxWidth: '380px', marginLeft: 'auto',
+            maxHeight: '480px',
             background: '#fff',
             borderRadius: '18px',
             boxShadow: '0 24px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)',

@@ -23,8 +23,9 @@ export default function AppealModal({ complaintId, onClose, onSuccess }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div className="glass-modal rounded-2xl p-6 w-full" style={{ maxWidth: '480px' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      className="sm:items-center sm:p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="glass-modal p-6 w-full rounded-t-2xl sm:rounded-2xl" style={{ maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="font-black text-lg" style={{ color: '#2d5c26' }}>File an Appeal</h2>

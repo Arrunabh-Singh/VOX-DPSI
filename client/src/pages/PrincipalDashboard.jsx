@@ -212,13 +212,13 @@ export default function PrincipalDashboard() {
           ))}
         </div>
 
-        {/* Tab nav */}
-        <div className="flex gap-2 mb-5 flex-wrap">
-          {[['complaints', 'All Complaints'], ['appeals', `Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', 'Analytics']].map(([tab, label]) => (
+        {/* Tab nav — scrolls horizontally on mobile */}
+        <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {[['complaints', '📋 Complaints'], ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', '📊 Analytics']].map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+              className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0"
               style={activeTab === tab
                 ? { background: '#2d5c26', color: '#c9a84c' }
                 : { background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}
@@ -241,11 +241,11 @@ export default function PrincipalDashboard() {
               />
             </div>
 
-            <div className="flex gap-3 mb-5 flex-wrap items-center">
+            <div className="flex gap-2 mb-5 flex-wrap items-center">
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
+                className="flex-1 min-w-[130px] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none"
                 style={{ border: '1px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.9)', color: '#374151' }}
               >
                 <option value="">All Statuses</option>
@@ -254,13 +254,13 @@ export default function PrincipalDashboard() {
               <select
                 value={domainFilter}
                 onChange={e => setDomainFilter(e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm font-medium focus:outline-none"
+                className="flex-1 min-w-[130px] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none"
                 style={{ border: '1px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.9)', color: '#374151' }}
               >
                 <option value="">All Domains</option>
                 {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
               </select>
-              <span className="text-sm text-gray-400 font-medium ml-auto">Showing {filtered.length} of {complaints.length}</span>
+              <span className="text-xs text-gray-400 font-medium w-full sm:w-auto sm:ml-auto">{filtered.length} of {complaints.length} shown</span>
             </div>
 
             {loading ? (

@@ -32,11 +32,11 @@ export default function Navbar() {
 
         {/* Right side */}
         {user && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell />
 
-            {/* Alpha Badge — VIP gold */}
-            <span style={{
+            {/* Alpha Badge — hidden on mobile, shown on sm+ */}
+            <span className="hidden sm:inline-flex" style={{
               background: 'rgba(201,168,76,0.12)',
               border: '1px solid rgba(201,168,76,0.5)',
               color: '#c9a84c',
@@ -50,7 +50,7 @@ export default function Navbar() {
               α Beta
             </span>
 
-            {/* User Info */}
+            {/* User Info — hidden on mobile, visible sm+ */}
             <div className="text-right hidden sm:block">
               <p className="font-semibold text-sm text-white leading-tight">{user.name}</p>
               <p className="text-xs font-medium" style={{ color: '#c9a84c' }}>
@@ -59,15 +59,17 @@ export default function Navbar() {
               </p>
             </div>
 
-            {/* Sign out */}
+            {/* Sign out — icon-only on mobile, text on sm+ */}
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all"
-              style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)' }}
+              className="flex items-center gap-1.5 rounded-lg text-sm font-semibold text-white transition-all"
+              style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)', padding: '6px 10px', minHeight: '36px' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)' }}
+              title="Sign out"
             >
-              Sign out
+              <span className="hidden sm:inline">Sign out</span>
+              <span className="sm:hidden text-base">⎋</span>
             </button>
           </div>
         )}
