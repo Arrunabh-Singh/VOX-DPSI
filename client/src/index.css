@@ -1,61 +1,100 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── CSS Custom Properties ──────────────────────────────────────────── */
+:root {
+  --color-bg:        #eae1c4;   /* warm parchment — page background */
+  --color-nav:       #2d5c26;   /* deep forest green — navbar, primary actions */
+  --color-nav-dark:  #1e3f18;   /* deepest green — hover/active states */
+  --color-card:      #ffffff;   /* white — all cards, dialogs, modals */
+  --color-surface:   #f5f0e8;   /* slightly warm white — secondary surfaces */
+  --color-border:    rgba(45, 92, 38, 0.12); /* subtle green-tinted border */
+  --color-text:      #1a1a1a;
+  --color-muted:     #6b7280;
+  --color-gold:      #c9a84c;   /* warm gold accent */
+  --shadow-card:     0 2px 16px rgba(45, 92, 38, 0.08);
+  --shadow-modal:    0 24px 64px rgba(45, 92, 38, 0.16), 0 4px 20px rgba(0,0,0,0.08);
+}
 
 @layer base {
   * { box-sizing: border-box; }
   html, body, #root { height: 100%; }
 
   body {
-    font-family: 'Outfit', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color: #1A1A1A;
-    background-color: #EEF2EC;
-    background-image:
-      linear-gradient(rgba(27,77,43,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(27,77,43,0.04) 1px, transparent 1px);
-    background-size: 48px 48px;
-    background-attachment: fixed;
+    color: var(--color-text);
+    background-color: var(--color-bg);
   }
 }
 
 @layer utilities {
-  /* Frosted glass card — light */
+  /* White card — all dashboard cards */
+  .card {
+    background: #ffffff;
+    border: 1px solid rgba(45, 92, 38, 0.12);
+    box-shadow: 0 2px 16px rgba(45, 92, 38, 0.08);
+    border-radius: 14px;
+  }
+
+  /* Glass card — slight warmth */
   .glass {
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 24px rgba(27, 77, 43, 0.07);
+    border: 1px solid rgba(45, 92, 38, 0.10);
+    box-shadow: 0 4px 24px rgba(45, 92, 38, 0.08);
   }
 
-  /* Frosted glass — for dialogs / modals */
+  /* Dialog / modal — pure white */
   .glass-modal {
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(32px);
-    -webkit-backdrop-filter: blur(32px);
-    border: 1px solid rgba(27, 77, 43, 0.1);
-    box-shadow: 0 24px 64px rgba(27, 77, 43, 0.18), 0 4px 16px rgba(0,0,0,0.08);
+    background: #ffffff;
+    border: 1px solid rgba(68, 111, 58, 0.12);
+    box-shadow: var(--shadow-modal);
+    border-radius: 20px;
   }
 
-  /* Frosted glass — dark green variant */
-  .glass-dark {
-    background: rgba(22, 61, 34, 0.88);
+  /* Green navbar glass */
+  .glass-nav {
+    background: rgba(45, 92, 38, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow: 0 8px 32px rgba(10, 31, 15, 0.35);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.20);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
   }
 
-  /* Login page full-bleed bg */
-  .login-bg {
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(27,77,43,0.18) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(201,146,10,0.08) 0%, transparent 50%),
-      linear-gradient(160deg, #0F2B18 0%, #1B4D2B 50%, #163D22 100%);
+  /* Dark green card — welcome banners, hero sections */
+  .glass-dark {
+    background: #2d5c26;
+    border: 1px solid rgba(201, 168, 76, 0.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+    border-radius: 16px;
+  }
+
+  /* Primary green button */
+  .btn-primary {
+    background: #2d5c26;
+    color: white;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover  { background: #1e3f18; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  /* Skeleton loading shimmer — warm tones */
+  .skeleton {
+    background: linear-gradient(90deg, #ede5d0 25%, #e3d9c0 50%, #ede5d0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
   }
 
   .line-clamp-2 {
@@ -66,4 +105,39 @@
   }
 
   .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Notification pulse animation */
+  @keyframes notif-pulse {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.15); }
+  }
+
+  /* Slide in from top */
+  @keyframes slideDown {
+    from { transform: translateY(-8px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* Fade in */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-slide-down { animation: slideDown 0.18s ease-out forwards; }
+  .animate-fade-in    { animation: fadeIn 0.2s ease-out forwards; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }

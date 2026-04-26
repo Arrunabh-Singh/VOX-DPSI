@@ -14,21 +14,37 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('vox_token')
-    if (token) {
-      api.get('/api/auth/me')
-        .then(res => {
-          setUser(res.data)
-          localStorage.setItem('vox_user', JSON.stringify(res.data))
-        })
-        .catch(() => {
-          localStorage.removeItem('vox_token')
-          localStorage.removeItem('vox_user')
-          setUser(null)
-        })
-        .finally(() => setLoading(false))
-    } else {
+    if (!token) { setLoading(false); return }
+
+    // Short-circuit: if we verified auth recently (< 5 min), trust localStorage
+    const lastVerified = parseInt(localStorage.getItem('vox_auth_time') || '0', 10)
+    const isFresh = Date.now() - lastVerified < 5 * 60 * 1000
+    const cachedUser = user // already loaded from localStorage initialiser above
+
+    if (isFresh && cachedUser) {
       setLoading(false)
+      // Background revalidate silently
+      api.get('/api/auth/me').then(res => {
+        setUser(res.data)
+        localStorage.setItem('vox_user', JSON.stringify(res.data))
+        localStorage.setItem('vox_auth_time', String(Date.now()))
+      }).catch(() => {})
+      return
     }
+
+    api.get('/api/auth/me')
+      .then(res => {
+        setUser(res.data)
+        localStorage.setItem('vox_user', JSON.stringify(res.data))
+        localStorage.setItem('vox_auth_time', String(Date.now()))
+      })
+      .catch(() => {
+        localStorage.removeItem('vox_token')
+        localStorage.removeItem('vox_user')
+        localStorage.removeItem('vox_auth_time')
+        setUser(null)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
@@ -36,6 +52,7 @@ export function AuthProvider({ children }) {
     const { token, user } = res.data
     localStorage.setItem('vox_token', token)
     localStorage.setItem('vox_user', JSON.stringify(user))
+    localStorage.setItem('vox_auth_time', String(Date.now()))
     setUser(user)
     return user
   }

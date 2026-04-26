@@ -3,7 +3,8 @@ import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
 import ComplaintCard from '../components/ComplaintCard'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { SkeletonList } from '../components/SkeletonCard'
+import Footer from '../components/Footer'
 import { DOMAINS } from '../utils/constants'
 
 const STATUS_FILTERS = [
@@ -26,18 +27,18 @@ export default function CoordinatorDashboard() {
     .filter(c => !domainFilter || c.domain === domainFilter)
 
   const stats = [
-    { label: 'Total',           value: complaints.length,                                                      color: '#1B4D2B' },
+    { label: 'Total',           value: complaints.length,                                                      color: '#2d5c26' },
     { label: 'Needs Attention', value: complaints.filter(c => c.status === 'escalated_to_coordinator').length, color: '#D97706' },
     { label: 'To Principal',    value: complaints.filter(c => c.status === 'escalated_to_principal').length,   color: '#DC2626' },
     { label: 'Resolved',        value: complaints.filter(c => c.status === 'resolved').length,                 color: '#16A34A' },
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#eae1c4' }}>
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Coordinator Dashboard</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#2d5c26' }}>Coordinator Dashboard</h1>
           <p className="text-gray-500 text-sm">Welcome, {user?.name}</p>
         </div>
 
@@ -58,8 +59,8 @@ export default function CoordinatorDashboard() {
                 onClick={() => setStatusFilter(f.key)}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
                 style={statusFilter === f.key
-                  ? { background: '#1B4D2B', color: '#fff' }
-                  : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(27,77,43,0.15)', color: '#4A7C5C' }}
+                  ? { background: '#2d5c26', color: '#fff' }
+                  : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}
               >{f.label}</button>
             ))}
           </div>
@@ -67,7 +68,7 @@ export default function CoordinatorDashboard() {
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
             className="rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(27,77,43,0.2)', background: 'rgba(255,255,255,0.8)', color: '#4A7C5C' }}
+            style={{ border: '1px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.8)', color: '#2d5c26' }}
           >
             <option value="">All Domains</option>
             {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
@@ -75,7 +76,7 @@ export default function CoordinatorDashboard() {
         </div>
 
         {loading ? (
-          <LoadingSpinner message="Loading complaints..." />
+          <SkeletonList count={3} />
         ) : filtered.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center">
             <p className="text-5xl mb-3">📭</p>
@@ -87,6 +88,7 @@ export default function CoordinatorDashboard() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

@@ -2,6 +2,8 @@ import express from 'express'
 import supabase from '../db/supabase.js'
 import { verifyToken } from '../middleware/auth.js'
 import { formatComplaintNo } from '../utils/complaintNo.js'
+import { detectUrgency } from '../utils/keywords.js'
+import { createNotification, notifyStatusChange, notifyAssignment } from '../services/notifications.js'
 
 const router = express.Router()
 
@@ -23,7 +25,7 @@ router.post('/', verifyToken, async (req, res) => {
     if (req.user.role !== 'student') {
       return res.status(403).json({ error: 'Only students can raise complaints' })
     }
-    const { domain, description, is_anonymous_requested, attachment_url } = req.body
+    const { domain, description, is_anonymous_requested, attachment_url, priority: requestedPriority } = req.body
     if (!domain || !description) {
       return res.status(400).json({ error: 'domain and description are required' })
     }
@@ -31,7 +33,19 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Description must be at least 50 characters' })
     }
 
-    // Find an available council member to assign (round-robin or first available)
+    // Keyword urgency detection
+    const detectedKeyword = detectUrgency(description)
+    let priority = requestedPriority === 'urgent' ? 'urgent' : 'normal'
+    let autoFlagged = false
+    if (detectedKeyword && priority !== 'urgent') {
+      priority = 'urgent'
+      autoFlagged = true
+    }
+
+    // SLA deadline: 48 hours from now
+    const slaDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+
+    // Find an available council member to assign
     const { data: councilMembers } = await supabase
       .from('users')
       .select('id')
@@ -41,36 +55,61 @@ router.post('/', verifyToken, async (req, res) => {
       ? councilMembers[Math.floor(Math.random() * councilMembers.length)].id
       : null
 
+    const insertPayload = {
+      student_id: req.user.id,
+      domain,
+      description,
+      priority,
+      is_anonymous_requested: !!is_anonymous_requested,
+      attachment_url: attachment_url || null,
+      assigned_council_member_id: assigned,
+      status: 'raised',
+      current_handler_role: 'council_member',
+      identity_revealed: false,
+    }
+
+    // Add sla_deadline if column exists (graceful degradation)
+    try { insertPayload.sla_deadline = slaDeadline } catch {}
+
     const { data: complaint, error } = await supabase
       .from('complaints')
-      .insert({
-        student_id: req.user.id,
-        domain,
-        description,
-        is_anonymous_requested: !!is_anonymous_requested,
-        attachment_url: attachment_url || null,
-        assigned_council_member_id: assigned,
-        status: 'raised',
-        current_handler_role: 'council_member',
-        identity_revealed: false,
-      })
+      .insert(insertPayload)
       .select('*, complaint_no')
       .single()
 
     if (error) throw error
 
-    // Add timeline entry
-    await supabase.from('complaint_timeline').insert({
+    // Timeline entries
+    const timelineEntries = [{
       complaint_id: complaint.id,
       action: 'Complaint raised',
       performed_by: req.user.id,
       performed_by_role: 'student',
-      note: `Domain: ${domain}. ${is_anonymous_requested ? 'Anonymity requested.' : ''}`,
-    })
+      note: `Domain: ${domain}. Priority: ${priority}. ${is_anonymous_requested ? 'Anonymity requested.' : ''}`,
+    }]
+
+    if (autoFlagged) {
+      timelineEntries.push({
+        complaint_id: complaint.id,
+        action: `⚡ Auto-flagged Urgent — sensitive keyword detected`,
+        performed_by: req.user.id,
+        performed_by_role: 'system',
+        note: `Keyword detected: "${detectedKeyword}". Complaint auto-upgraded to URGENT.`,
+      })
+    }
+
+    await supabase.from('complaint_timeline').insert(timelineEntries)
+
+    // Notify assigned council member
+    if (assigned) {
+      notifyAssignment(assigned, formatComplaintNo(complaint.complaint_no), domain, complaint.id)
+    }
 
     res.status(201).json({
       ...complaint,
       complaint_no_display: formatComplaintNo(complaint.complaint_no),
+      auto_flagged: autoFlagged,
+      detected_keyword: detectedKeyword,
     })
   } catch (err) {
     console.error('Raise complaint error:', err)
@@ -179,9 +218,10 @@ router.patch('/:id/verify', verifyToken, async (req, res) => {
     const { id } = req.params
     const { note } = req.body
 
+    const slaDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const { data, error } = await supabase
       .from('complaints')
-      .update({ status: 'verified', updated_at: new Date().toISOString() })
+      .update({ status: 'verified', updated_at: new Date().toISOString(), sla_deadline: slaDeadline })
       .eq('id', id)
       .eq('assigned_council_member_id', req.user.id)
       .select()
@@ -196,6 +236,9 @@ router.patch('/:id/verify', verifyToken, async (req, res) => {
       performed_by_role: 'council_member',
       note: note || 'Council member verified the complaint in person.',
     })
+
+    // Notify student
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), 'raised', 'verified', id)
 
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
@@ -273,6 +316,9 @@ router.patch('/:id/resolve', verifyToken, async (req, res) => {
       note: note || 'Issue resolved.',
     })
 
+    // Notify student of resolution
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), data.status, 'resolved', id)
+
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
     res.status(500).json({ error: 'Resolve failed' })
@@ -343,10 +389,180 @@ router.patch('/:id/escalate', verifyToken, async (req, res) => {
       note: `${reason ? reason + '. ' : ''}${identityNote}`,
     })
 
+    // Notify student of escalation
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), data.status, escalate_to, id)
+
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
     console.error('Escalate error:', err)
     res.status(500).json({ error: 'Escalation failed' })
+  }
+})
+
+// PATCH /api/complaints/:id/feedback — student submits feedback after resolution
+router.patch('/:id/feedback', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students can submit feedback' })
+    }
+    const { id } = req.params
+    const { rating, note } = req.body
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be 1-5' })
+    }
+    const { data: complaint } = await supabase
+      .from('complaints')
+      .select('student_id, status, feedback_rating')
+      .eq('id', id)
+      .single()
+
+    if (!complaint || complaint.student_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    if (complaint.status !== 'resolved') {
+      return res.status(400).json({ error: 'Can only rate resolved complaints' })
+    }
+    if (complaint.feedback_rating) {
+      return res.status(400).json({ error: 'Feedback already submitted' })
+    }
+
+    const { data, error } = await supabase
+      .from('complaints')
+      .update({ feedback_rating: rating, feedback_note: note || null, feedback_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    res.json({ success: true, data })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to submit feedback' })
+  }
+})
+
+// POST /api/complaints/:id/appeal — student files an appeal
+router.post('/:id/appeal', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students can file appeals' })
+    }
+    const { id } = req.params
+    const { reason } = req.body
+    if (!reason || reason.length < 50) {
+      return res.status(400).json({ error: 'Appeal reason must be at least 50 characters' })
+    }
+
+    const { data: complaint } = await supabase
+      .from('complaints')
+      .select('student_id, status')
+      .eq('id', id)
+      .single()
+
+    if (!complaint || complaint.student_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    if (complaint.status !== 'resolved') {
+      return res.status(400).json({ error: 'Can only appeal resolved complaints' })
+    }
+
+    // Create appeal
+    const { data: appeal, error } = await supabase
+      .from('appeals')
+      .insert({ complaint_id: id, filed_by: req.user.id, reason, status: 'pending' })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Update complaint status to appealed
+    await supabase.from('complaints')
+      .update({ status: 'appealed', updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    await supabase.from('complaint_timeline').insert({
+      complaint_id: id,
+      action: '📋 Appeal filed by student',
+      performed_by: req.user.id,
+      performed_by_role: 'student',
+      note: reason,
+    })
+
+    res.status(201).json(appeal)
+  } catch (err) {
+    console.error('Appeal error:', err)
+    res.status(500).json({ error: 'Failed to file appeal' })
+  }
+})
+
+// GET /api/appeals — supervisor/principal
+router.get('/appeals/all', verifyToken, async (req, res) => {
+  try {
+    const { role } = req.user
+    if (!['supervisor', 'principal', 'coordinator'].includes(role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    const { data, error } = await supabase
+      .from('appeals')
+      .select(`*, complaint:complaint_id(complaint_no, domain, status, description), filed_by_user:filed_by(name, scholar_no)`)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    res.json(data || [])
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch appeals' })
+  }
+})
+
+// PATCH /api/appeals/:appealId/review — supervisor/principal reviews appeal
+router.patch('/appeals/:appealId/review', verifyToken, async (req, res) => {
+  try {
+    const { role, id: userId } = req.user
+    if (!['supervisor', 'principal'].includes(role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    const { appealId } = req.params
+    const { decision, note } = req.body
+    if (!['upheld', 'rejected'].includes(decision)) {
+      return res.status(400).json({ error: 'Decision must be upheld or rejected' })
+    }
+    if (!note || note.trim().length < 5) {
+      return res.status(400).json({ error: 'Review note is required' })
+    }
+
+    const { data: appeal, error } = await supabase
+      .from('appeals')
+      .update({ status: decision, reviewer_id: userId, reviewer_note: note, resolved_at: new Date().toISOString() })
+      .eq('id', appealId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // If upheld, revert complaint to in_progress
+    if (decision === 'upheld') {
+      await supabase.from('complaints')
+        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+        .eq('id', appeal.complaint_id)
+
+      await supabase.from('complaint_timeline').insert({
+        complaint_id: appeal.complaint_id,
+        action: '📋 Appeal upheld — complaint reopened',
+        performed_by: userId,
+        performed_by_role: role,
+        note: note,
+      })
+    } else {
+      await supabase.from('complaint_timeline').insert({
+        complaint_id: appeal.complaint_id,
+        action: '📋 Appeal rejected',
+        performed_by: userId,
+        performed_by_role: role,
+        note: note,
+      })
+    }
+
+    res.json(appeal)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to review appeal' })
   }
 })
 
@@ -371,6 +587,205 @@ router.patch('/:id/assign', verifyToken, async (req, res) => {
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
     res.status(500).json({ error: 'Assignment failed' })
+  }
+})
+
+// POST /api/complaints/:id/deletion-request — council member requests deletion
+router.post('/:id/deletion-request', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'council_member') {
+      return res.status(403).json({ error: 'Only council members can request deletion' })
+    }
+    const { id } = req.params
+    const { reason } = req.body
+    if (!reason || reason.trim().length < 20) {
+      return res.status(400).json({ error: 'Reason must be at least 20 characters' })
+    }
+
+    // Check complaint is assigned to this council member
+    const { data: complaint } = await supabase
+      .from('complaints')
+      .select('id, assigned_council_member_id, status, complaint_no')
+      .eq('id', id)
+      .single()
+
+    if (!complaint || complaint.assigned_council_member_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied — not assigned to you' })
+    }
+    if (['resolved','closed'].includes(complaint.status)) {
+      return res.status(400).json({ error: 'Cannot request deletion of resolved/closed complaints' })
+    }
+
+    // Check no pending request already exists
+    const { data: existing } = await supabase
+      .from('complaint_deletions')
+      .select('id')
+      .eq('complaint_id', id)
+      .eq('status', 'pending')
+      .single()
+
+    if (existing) {
+      return res.status(400).json({ error: 'A deletion request is already pending for this complaint' })
+    }
+
+    const { data: delRequest, error } = await supabase
+      .from('complaint_deletions')
+      .insert({
+        complaint_id: id,
+        requested_by: req.user.id,
+        reason: reason.trim(),
+        council_approved: true,
+        superior_approved: false,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    await supabase.from('complaint_timeline').insert({
+      complaint_id: id,
+      action: '🗑️ Deletion requested by council member',
+      performed_by: req.user.id,
+      performed_by_role: 'council_member',
+      note: `Reason: ${reason.trim()}. Awaiting supervisor approval.`,
+    })
+
+    res.status(201).json(delRequest)
+  } catch (err) {
+    console.error('Deletion request error:', err)
+    res.status(500).json({ error: 'Failed to create deletion request' })
+  }
+})
+
+// GET /api/complaints/deletion-requests — supervisor views all pending deletion requests
+router.get('/deletion-requests/all', verifyToken, async (req, res) => {
+  try {
+    if (!['supervisor', 'principal'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    const { data, error } = await supabase
+      .from('complaint_deletions')
+      .select(`
+        *,
+        complaint:complaint_id(complaint_no, domain, description, status),
+        requested_by_user:requested_by(id, name, role)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    res.json((data || []).map(d => ({
+      ...d,
+      complaint: d.complaint ? {
+        ...d.complaint,
+        complaint_no_display: formatComplaintNo(d.complaint.complaint_no),
+      } : null,
+    })))
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch deletion requests' })
+  }
+})
+
+// PATCH /api/complaints/deletion-requests/:reqId/review — supervisor approves or rejects
+router.patch('/deletion-requests/:reqId/review', verifyToken, async (req, res) => {
+  try {
+    if (!['supervisor', 'principal'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    const { reqId } = req.params
+    const { decision, note } = req.body // decision: 'approved' | 'rejected'
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ error: 'Decision must be approved or rejected' })
+    }
+
+    const { data: delReq, error: fetchErr } = await supabase
+      .from('complaint_deletions')
+      .select('*')
+      .eq('id', reqId)
+      .eq('status', 'pending')
+      .single()
+
+    if (fetchErr || !delReq) return res.status(404).json({ error: 'Deletion request not found or already reviewed' })
+
+    const { data: updated, error } = await supabase
+      .from('complaint_deletions')
+      .update({
+        status: decision,
+        superior_approved: decision === 'approved',
+        superior_id: req.user.id,
+        superior_note: note || null,
+        resolved_at: new Date().toISOString(),
+      })
+      .eq('id', reqId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    if (decision === 'approved') {
+      // Add final timeline entry before deletion
+      await supabase.from('complaint_timeline').insert({
+        complaint_id: delReq.complaint_id,
+        action: '🗑️ Complaint deleted — dual approval granted',
+        performed_by: req.user.id,
+        performed_by_role: req.user.role,
+        note: note || 'Deleted after supervisor approval. Complaint was identified as invalid/gibberish.',
+      })
+      // Delete the complaint
+      await supabase.from('complaints').delete().eq('id', delReq.complaint_id)
+    } else {
+      await supabase.from('complaint_timeline').insert({
+        complaint_id: delReq.complaint_id,
+        action: '🗑️ Deletion request rejected by supervisor',
+        performed_by: req.user.id,
+        performed_by_role: req.user.role,
+        note: note || 'Supervisor reviewed and rejected the deletion request.',
+      })
+    }
+
+    res.json(updated)
+  } catch (err) {
+    console.error('Deletion review error:', err)
+    res.status(500).json({ error: 'Failed to review deletion request' })
+  }
+})
+
+// GET /api/complaints/export/csv — CSV export for principal/supervisor
+router.get('/export/csv', verifyToken, async (req, res) => {
+  try {
+    const { role } = req.user
+    if (!['principal', 'supervisor', 'coordinator'].includes(role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const { data: complaints, error } = await supabase
+      .from('complaints')
+      .select('*, student:student_id(name, scholar_no, section), council_member:assigned_council_member_id(name)')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    const headers = ['Complaint No', 'Domain', 'Priority', 'Status', 'Student', 'Scholar No', 'Section', 'Council Member', 'Date Raised', 'Last Updated', 'Description']
+    const rows = (complaints || []).map(c => [
+      formatComplaintNo(c.complaint_no),
+      c.domain,
+      c.priority || 'normal',
+      c.status,
+      c.student?.name || '',
+      c.student?.scholar_no || '',
+      c.student?.section || '',
+      c.council_member?.name || '',
+      new Date(c.created_at).toLocaleDateString('en-IN'),
+      new Date(c.updated_at).toLocaleDateString('en-IN'),
+      `"${(c.description || '').replace(/"/g, '""')}"`,
+    ])
+
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', `attachment; filename="vox-dpsi-${new Date().toISOString().slice(0,10)}.csv"`)
+    res.send(csv)
+  } catch (err) {
+    res.status(500).json({ error: 'Export failed' })
   }
 })
 

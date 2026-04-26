@@ -1,6 +1,19 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import api from './utils/api'
+
+// Keep Railway from sleeping — ping every 4 minutes while tab is open
+function KeepAlive() {
+  useEffect(() => {
+    const ping = () => api.get('/api/health').catch(() => {})
+    ping() // immediate ping on load
+    const id = setInterval(ping, 4 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+  return null
+}
 
 import Login from './pages/Login'
 import StudentDashboard from './pages/StudentDashboard'
@@ -46,6 +59,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <KeepAlive />
         <Toaster
           position="top-right"
           toastOptions={{

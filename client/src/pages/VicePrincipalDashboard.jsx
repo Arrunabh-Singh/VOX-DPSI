@@ -49,14 +49,14 @@ export default function VicePrincipalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-screen bg-[#eae1c4]">
       <Navbar />
 
       {/* Resolve Modal */}
       {resolveId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="bg-[#003366] rounded-t-2xl px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#2d5c26] rounded-t-2xl px-6 py-4 flex items-center justify-between">
               <h2 className="text-white font-bold text-lg">Resolve Complaint</h2>
               <button onClick={() => setResolveId(null)} className="text-white/70 hover:text-white text-2xl leading-none">&times;</button>
             </div>
@@ -68,7 +68,7 @@ export default function VicePrincipalDashboard() {
                   onChange={e => setResolveNote(e.target.value)}
                   rows={3}
                   placeholder="Describe how the complaint was resolved..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d5c26]"
                 />
               </div>
               <div className="flex gap-3 pt-1">
@@ -81,7 +81,7 @@ export default function VicePrincipalDashboard() {
                 <button
                   onClick={handleResolve}
                   disabled={actionLoading}
-                  className="flex-1 py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50" style={{ background: '#003366' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#003366'}
+                  className="flex-1 py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50" style={{ background: '#2d5c26' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#2d5c26'}
                 >
                   {actionLoading ? 'Resolving...' : 'Confirm Resolve'}
                 </button>
@@ -103,7 +103,7 @@ export default function VicePrincipalDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total', value: stats.total, color: '#003366', bg: '#EFF6FF' },
+            { label: 'Total', value: stats.total, color: '#2d5c26', bg: '#EFF6FF' },
             { label: 'Pending', value: stats.pending, color: '#D97706', bg: '#FEF3C7' },
             { label: 'Resolved', value: stats.resolved, color: '#16A34A', bg: '#DCFCE7' },
             { label: 'Escalated to Principal', value: stats.toPrincipal, color: '#DC2626', bg: '#FEE2E2' },
@@ -120,7 +120,7 @@ export default function VicePrincipalDashboard() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2d5c26]"
           >
             <option value="">All Statuses</option>
             {Object.entries(STATUSES).map(([k, s]) => (
@@ -130,7 +130,7 @@ export default function VicePrincipalDashboard() {
           <select
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2d5c26]"
           >
             <option value="">All Domains</option>
             {Object.entries(DOMAINS).map(([k, d]) => (
@@ -173,7 +173,7 @@ export default function VicePrincipalDashboard() {
                   <div className="px-4 pb-4 -mt-1">
                     <button
                       onClick={e => { e.stopPropagation(); setResolveId(c.id); setResolveNote('') }}
-                      className="w-full py-2 text-white rounded-xl text-xs font-semibold transition-colors" style={{ background: '#003366' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#003366'}
+                      className="w-full py-2 text-white rounded-xl text-xs font-semibold transition-colors" style={{ background: '#2d5c26' }} onMouseEnter={e => e.currentTarget.style.background='#002952'} onMouseLeave={e => e.currentTarget.style.background='#2d5c26'}
                     >
                       ✅ Resolve
                     </button>

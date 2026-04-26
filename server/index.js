@@ -7,6 +7,9 @@ import complaintRoutes from './routes/complaints.js'
 import timelineRoutes from './routes/timeline.js'
 import uploadRoutes from './routes/upload.js'
 import userRoutes from './routes/users.js'
+import notificationRoutes from './routes/notifications.js'
+import notesRoutes from './routes/notes.js'
+import { startAutoEscalateCron } from './jobs/autoEscalate.js'
 
 dotenv.config()
 
@@ -25,11 +28,14 @@ app.use(express.urlencoded({ extended: true }))
 app.use('/api/auth', authRoutes)
 app.use('/api/complaints', complaintRoutes)
 app.use('/api/complaints/:id/timeline', timelineRoutes)
+app.use('/api/complaints/:id/notes', notesRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/notifications', notificationRoutes)
 
-// ── Health check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'ok', service: 'vox-dpsi-server' }))
+// ── Health check (also at /api/health for keep-alive pings from client) ──────
+app.get('/health',     (req, res) => res.json({ status: 'ok', ts: Date.now() }))
+app.get('/api/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }))
@@ -42,6 +48,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Vox DPSI server running on http://localhost:${PORT}`)
+  startAutoEscalateCron()
 })
 
 export default app

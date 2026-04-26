@@ -43,7 +43,7 @@ export default function FileUpload({ onUpload, label = 'Attach File' }) {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#003366] hover:text-[#003366] transition-all disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#2d5c26] hover:text-[#2d5c26] transition-all disabled:opacity-50"
       >
         {uploading ? (
           <>

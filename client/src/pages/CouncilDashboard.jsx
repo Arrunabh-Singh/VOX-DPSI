@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { useComplaints } from '../hooks/useComplaints'
 import Navbar from '../components/Navbar'
 import ComplaintCard from '../components/ComplaintCard'
-import LoadingSpinner from '../components/LoadingSpinner'
+import Footer from '../components/Footer'
+import { SkeletonList } from '../components/SkeletonCard'
 
 const STATUS_FILTERS = [
   { key: '', label: 'All' },
@@ -36,11 +37,11 @@ export default function CouncilDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#eae1c4' }}>
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Council Dashboard</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#2d5c26' }}>Council Dashboard</h1>
           <p className="text-gray-500 text-sm mt-0.5">Managing complaints assigned to you, {user?.name}</p>
         </div>
 
@@ -62,8 +63,8 @@ export default function CouncilDashboard() {
               onClick={() => setFilter(f.key)}
               className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all"
               style={filter === f.key
-                ? { background: '#1B4D2B', color: '#fff' }
-                : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(27,77,43,0.15)', color: '#4A7C5C' }}
+                ? { background: '#2d5c26', color: '#c9a84c' }
+                : { background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}
             >
               {f.label}
               {f.key === '' && <span className="ml-1.5 text-xs opacity-70">({complaints.length})</span>}
@@ -72,12 +73,12 @@ export default function CouncilDashboard() {
         </div>
 
         {loading ? (
-          <LoadingSpinner message="Loading complaints..." />
+          <SkeletonList count={3} />
         ) : filtered.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center">
-            <p className="text-5xl mb-3">📭</p>
-            <h3 className="font-bold text-gray-700 text-lg">No complaints here</h3>
-            <p className="text-gray-500 text-sm mt-1">{filter ? 'No complaints with this status.' : 'No complaints assigned to you yet.'}</p>
+            <p className="text-5xl mb-3">✅</p>
+            <h3 className="font-bold text-gray-700 text-lg">All caught up</h3>
+            <p className="text-gray-500 text-sm mt-1">{filter ? 'No complaints with this status.' : 'Nothing assigned to you yet.'}</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -85,6 +86,7 @@ export default function CouncilDashboard() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

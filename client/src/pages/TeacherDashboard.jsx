@@ -3,7 +3,8 @@ import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
 import ComplaintCard from '../components/ComplaintCard'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { SkeletonList } from '../components/SkeletonCard'
+import Footer from '../components/Footer'
 
 export default function TeacherDashboard() {
   const { user } = useAuth()
@@ -17,11 +18,11 @@ export default function TeacherDashboard() {
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: '#EEF2EC' }}>
+    <div className="min-h-screen" style={{ background: '#eae1c4' }}>
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black" style={{ color: '#1B4D2B' }}>Class Teacher Dashboard</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#2d5c26' }}>Class Teacher Dashboard</h1>
           <p className="text-gray-500 text-sm mt-0.5">Welcome, {user?.name} — Complaints escalated to your attention</p>
         </div>
 
@@ -35,7 +36,7 @@ export default function TeacherDashboard() {
         </div>
 
         {loading ? (
-          <LoadingSpinner message="Loading escalated complaints..." />
+          <SkeletonList count={3} />
         ) : complaints.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center">
             <p className="text-5xl mb-3">✅</p>
@@ -54,6 +55,7 @@ export default function TeacherDashboard() {
           </>
         )}
       </main>
+      <Footer />
     </div>
   )
 }
