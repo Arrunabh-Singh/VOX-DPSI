@@ -141,8 +141,9 @@ router.get('/', verifyToken, async (req, res) => {
     } else if (role === 'council_member') {
       query = query.eq('assigned_council_member_id', userId)
     } else if (role === 'class_teacher') {
-      // Show all complaints currently at teacher level (active, in-progress, or resolved there)
+      // Show all complaints currently at teacher level; filtered by section if teacher has one
       query = query.eq('current_handler_role', 'class_teacher')
+      // Note: section-based filtering is handled client-side after fetching student info
     } else if (role === 'coordinator') {
       // Show complaints at coordinator level, plus ones they escalated to principal
       query = query.in('current_handler_role', ['coordinator', 'principal'])
@@ -205,9 +206,29 @@ router.get('/:id', verifyToken, async (req, res) => {
       complaint_no_display: formatComplaintNo(complaint.complaint_no),
     }
 
+    // Resolve current handler name for display
+    const handlerRoleMap = {
+      council_member: 'council_member',
+      class_teacher: 'class_teacher',
+      coordinator: 'coordinator',
+      principal: 'principal',
+      supervisor: 'supervisor',
+    }
+    if (complaint.current_handler_role && complaint.current_handler_role !== 'council_member') {
+      const { data: handlerUser } = await supabase
+        .from('users')
+        .select('id, name, role')
+        .eq('role', complaint.current_handler_role)
+        .limit(1)
+        .single()
+      if (handlerUser) result.current_handler = handlerUser
+    } else if (complaint.assigned_council_member_id) {
+      result.current_handler = complaint.council_member
+    }
+
     // Apply anonymity for teacher/coordinator (principal and vice_principal always see full identity)
-    if (['class_teacher', 'coordinator'].includes(role) && complaint.is_anonymous_requested && !complaint.identity_revealed) {
-      result.student = { id: null, name: 'Anonymous Student', scholar_no: null, section: null, house: null }
+    if (["class_teacher", "coordinator"].includes(role) && complaint.is_anonymous_requested && !complaint.identity_revealed) {
+      result.student = { id: null, name: "Anonymous Student", scholar_no: null, section: null, house: null }
     }
 
     res.json(result)

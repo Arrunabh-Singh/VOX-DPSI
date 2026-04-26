@@ -23,6 +23,11 @@ INSERT INTO users (id, name, email, password_hash, role, scholar_no, section, ho
   ('44444444-4444-4444-4444-444444444444', 'Mr. Kapil Sir',       'kapil@staff.dpsindore.org',   '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'coordinator',    NULL,   NULL,   NULL),
   ('55555555-5555-5555-5555-555555555555', 'Mr. Parminder Chopra','principal@dpsindore.org',     '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'principal',      NULL,   NULL,   NULL),
   ('66666666-6666-6666-6666-666666666666', 'Arrunabh Singh',      '5411@student.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5411', 'XII B', 'Prithvi'),
+  ('aa111111-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'Riya Mehta',          'riya@student.dpsindore.org',  '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5412', 'XII A', 'Agni'),
+  ('aa222222-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'Nikhil Gupta',        'nikhil@student.dpsindore.org','$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5413', 'XII C', 'Vayu'),
+  ('aa333333-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'Tanvi Joshi',         'tanvi@student.dpsindore.org', '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5414', 'XII D', 'Akash'),
+  ('aa444444-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'Dev Sharma',          'dev@student.dpsindore.org',   '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5415', 'XII E', 'Prithvi'),
+  ('aa555555-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'Ananya Verma',        'ananya@student.dpsindore.org','$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'supervisor',     '5416', 'XII F', 'Agni'),
   ('77777777-7777-7777-7777-777777777777', 'Aisha Khan',          'aisha@student.dpsindore.org', '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'student',        '5003', 'XII A', 'Agni'),
   ('88888888-8888-8888-8888-888888888888', 'Dr. Meena Sharma',    'vp@dpsindore.org',            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMlJbekRShjle7V3Bm6EL3ciy6', 'vice_principal', NULL,   NULL,   NULL);
 
@@ -93,9 +98,27 @@ INSERT INTO complaint_timeline (complaint_id, action, performed_by, performed_by
 
   ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Complaint raised',             '77777777-7777-7777-7777-777777777777', 'student',        'Domain: behaviour. Anonymity requested.'),
   ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Verified in person',           '22222222-2222-2222-2222-222222222222', 'council_member', 'Confirmed issue. Identity kept anonymous.'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Escalated to class teacher',   '22222222-2222-2222-2222-222222222222', 'council_member', 'Requires teacher intervention. Student identity kept anonymous per their request.');
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Escalated to class teacher',   '22222222-2222-2222-2222-222222222222', 'council_member', 'Requires teacher intervention. Student identity kept anonymous per their request.'),
+
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Complaint raised',             '11111111-1111-1111-1111-111111111111', 'student',        'Domain: academics. Pending assignment to council member.'),
+
+  ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'Complaint raised',             '11111111-1111-1111-1111-111111111111', 'student',        'Domain: personal. Anonymity requested.'),
+  ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'Verified in person',           '22222222-2222-2222-2222-222222222222', 'council_member', 'Met with student. Situation noted. Identity protected.'),
+
+  ('gggggggg-gggg-gggg-gggg-gggggggggggg', 'Complaint raised',             '11111111-1111-1111-1111-111111111111', 'student',        'Domain: infrastructure.'),
+  ('gggggggg-gggg-gggg-gggg-gggggggggggg', 'Verified in person',           '22222222-2222-2222-2222-222222222222', 'council_member', 'Confirmed projector issue in XII B.'),
+  ('gggggggg-gggg-gggg-gggg-gggggggggggg', 'Complaint resolved',           '22222222-2222-2222-2222-222222222222', 'council_member', 'New projector installed by maintenance. Issue resolved.'),
+
+  ('hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh', 'Complaint raised',             '11111111-1111-1111-1111-111111111111', 'student',        'Domain: safety.'),
+  ('hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh', 'Verified in person',           '22222222-2222-2222-2222-222222222222', 'council_member', 'Confirmed blocked fire exits.'),
+  ('hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh', 'Escalated to coordinator',     '22222222-2222-2222-2222-222222222222', 'council_member', 'Safety issue requires coordinator authority.'),
+
+  ('iiiiiiii-iiii-iiii-iiii-iiiiiiiiiiii', 'Complaint raised',             '11111111-1111-1111-1111-111111111111', 'student',        'Domain: behaviour. Anonymity requested.'),
+  ('iiiiiiii-iiii-iiii-iiii-iiiiiiiiiiii', 'Verified in person',           '22222222-2222-2222-2222-222222222222', 'council_member', 'Spoke confidentially. Identity protected.'),
+  ('iiiiiiii-iiii-iiii-iiii-iiiiiiiiiiii', 'Status updated to: in progress','22222222-2222-2222-2222-222222222222', 'council_member', 'Working with subject teacher to monitor the situation.');
 
 -- ── ESCALATION RECORDS ────────────────────────────────────────────────────────
 INSERT INTO escalations (complaint_id, escalated_by, escalated_to_role, student_consent, reason) VALUES
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'coordinator',   false, 'Issue affects multiple students in the class.'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222', 'class_teacher', false, 'Requires teacher authority to address senior student behaviour.');
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222', 'class_teacher', false, 'Requires teacher authority to address senior student behaviour.'),
+  ('hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh', '22222222-2222-2222-2222-222222222222', 'coordinator',   false, 'Safety violation requires administrative action.');

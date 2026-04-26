@@ -19,18 +19,25 @@ async function getTwilio() {
   }
 }
 
-const FROM = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886' // Twilio sandbox default
+// FROM is evaluated lazily so Railway env vars are available
+const getFrom = () => process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'
 
 async function sendWhatsApp(to, message) {
   if (!to) return
   const twilio = await getTwilio()
   if (!twilio) return // env not configured — silently skip
 
-  const toNumber = `whatsapp:${to.startsWith('+') ? to : '+91' + to}`
+  // Normalize: strip any existing whatsapp: prefix, then re-add once
+  let rawNumber = to.replace(/^whatsapp:/i, '').trim()
+  // Ensure starts with + (default to +91 India if bare number)
+  if (!rawNumber.startsWith('+')) rawNumber = '+91' + rawNumber
+  const toNumber = `whatsapp:${rawNumber}`
+
   try {
-    await twilio.messages.create({ from: FROM, to: toNumber, body: message })
+    const result = await twilio.messages.create({ from: getFrom(), to: toNumber, body: message })
+    console.log(`WhatsApp sent to ${toNumber}: ${result.sid}`)
   } catch (err) {
-    console.warn('WhatsApp send failed:', err.message)
+    console.warn(`WhatsApp send failed to ${toNumber}:`, err.message)
   }
 }
 

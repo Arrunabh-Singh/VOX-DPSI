@@ -28,7 +28,19 @@ export default function CouncilDashboard() {
   const [filter, setFilter] = useState('')
   useEffect(() => { document.title = 'Council — Vox DPSI' }, [])
 
-  const filtered = filter ? complaints.filter(c => c.status === filter) : complaints
+  // Sort: overdue first, then urgent, then by status priority, then newest
+  const OVERDUE_THRESHOLD = 48 * 3600000
+  const statusPriority = { raised: 0, verified: 1, in_progress: 2, escalated_to_teacher: 3, escalated_to_coordinator: 4, resolved: 5, closed: 6 }
+  const sorted = [...complaints].sort((a, b) => {
+    const aOverdue = !['resolved','closed'].includes(a.status) && (Date.now() - new Date(a.updated_at || a.created_at).getTime()) > OVERDUE_THRESHOLD
+    const bOverdue = !['resolved','closed'].includes(b.status) && (Date.now() - new Date(b.updated_at || b.created_at).getTime()) > OVERDUE_THRESHOLD
+    if (aOverdue !== bOverdue) return aOverdue ? -1 : 1
+    if ((a.priority === 'urgent') !== (b.priority === 'urgent')) return a.priority === 'urgent' ? -1 : 1
+    const sp = (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9)
+    if (sp !== 0) return sp
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+  const filtered = filter ? sorted.filter(c => c.status === filter) : sorted
   const stats = {
     assigned: complaints.length,
     pendingVerification: complaints.filter(c => c.status === 'raised').length,

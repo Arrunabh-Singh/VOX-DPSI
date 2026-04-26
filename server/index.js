@@ -9,6 +9,7 @@ import uploadRoutes from './routes/upload.js'
 import userRoutes from './routes/users.js'
 import notificationRoutes from './routes/notifications.js'
 import notesRoutes from './routes/notes.js'
+import suggestionRoutes from './routes/suggestions.js'
 import { startAutoEscalateCron } from './jobs/autoEscalate.js'
 
 dotenv.config()
@@ -32,6 +33,20 @@ app.use('/api/complaints/:id/notes', notesRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/suggestions', suggestionRoutes)
+
+// ── WhatsApp test endpoint ────────────────────────────────────────────────────
+app.get('/api/test-whatsapp', async (req, res) => {
+  const { notifyAdminAlert } = await import('./services/notifications.js')
+  const adminWA = process.env.ADMIN_WHATSAPP_NUMBER
+  if (!adminWA) return res.json({ ok: false, reason: 'ADMIN_WHATSAPP_NUMBER not set' })
+  try {
+    await notifyAdminAlert(adminWA, '🧪 Test message from Vox DPSI — WhatsApp is working!')
+    res.json({ ok: true, to: adminWA, from: process.env.TWILIO_WHATSAPP_FROM || 'sandbox' })
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
 
 // ── Health check (also at /api/health for keep-alive pings from client) ──────
 app.get('/health',     (req, res) => res.json({ status: 'ok', ts: Date.now() }))

@@ -90,7 +90,7 @@ export default function ComplaintDetail() {
   const isStudent = role === 'student'
   const canResolve = ['council_member', 'class_teacher', 'coordinator', 'principal'].includes(role)
   const isCurrentHandler = complaint.current_handler_role === role
-  const canEscalate = isCurrentHandler && !['resolved', 'closed'].includes(complaint.status) && !isPrincipal
+  const canEscalate = isCurrentHandler && !['resolved', 'closed', 'raised'].includes(complaint.status) && !isPrincipal
   const canVerify = isCouncil && complaint.status === 'raised'
   const canMarkInProgress = (
     (isCouncil && complaint.status === 'verified') ||
@@ -191,7 +191,7 @@ export default function ComplaintDetail() {
         >← Back</button>
 
         {/* Banners */}
-        {isOverdue && (
+        {isOverdue && !isStudent && (
           <div className="mb-4 rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>
             <span>⚠️</span>
             <p className="text-amber-800 text-sm font-medium">This complaint has exceeded the 48-hour SLA. Please take immediate action.</p>
@@ -284,7 +284,14 @@ export default function ComplaintDetail() {
                 )}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Current Handler</p>
-                  <p className="font-medium text-gray-700 mt-0.5">{ROLES[complaint.current_handler_role] || complaint.current_handler_role}</p>
+                  {complaint.current_handler ? (
+                    <div className="mt-0.5">
+                      <p className="font-semibold text-gray-800 text-sm">{complaint.current_handler.name}</p>
+                      <p className="text-xs text-gray-500">{ROLES[complaint.current_handler_role] || complaint.current_handler_role}</p>
+                    </div>
+                  ) : (
+                    <p className="font-medium text-gray-700 mt-0.5">{ROLES[complaint.current_handler_role] || complaint.current_handler_role}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -344,6 +351,11 @@ export default function ComplaintDetail() {
               <div className="glass rounded-2xl p-5">
                 <h3 className="font-bold mb-4" style={{ color: '#2d5c26' }}>Actions</h3>
                 <div className="space-y-2">
+                  {isCouncil && complaint.status === 'raised' && !canVerify && (
+                    <div className="rounded-xl px-3 py-2.5 text-center text-xs font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                      ⚠️ Verify the complaint first before escalating or resolving
+                    </div>
+                  )}
                   {canVerify && (
                     <button onClick={() => doAction('verify', { note: 'Verified the complaint in person.' })} disabled={actionLoading}
                       className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"

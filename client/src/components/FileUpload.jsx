@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 export default function FileUpload({ onUpload, label = 'Attach File' }) {
   const [uploading, setUploading] = useState(false)
   const [fileName, setFileName] = useState('')
+  const [error, setError] = useState('')
   const inputRef = useRef()
 
   const handleChange = async (e) => {
@@ -23,8 +24,11 @@ export default function FileUpload({ onUpload, label = 'Attach File' }) {
       onUpload(res.data.url)
       toast.success('File uploaded successfully')
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Upload failed')
+      const msg = err.response?.data?.error || 'Upload failed — check Supabase Storage bucket'
+      toast.error(msg)
+      setError(msg)
       setFileName('')
+      if (inputRef.current) inputRef.current.value = ''
     } finally {
       setUploading(false)
     }
@@ -57,8 +61,11 @@ export default function FileUpload({ onUpload, label = 'Attach File' }) {
           </>
         )}
       </button>
-      {fileName && !uploading && (
+      {fileName && !uploading && !error && (
         <p className="text-xs text-green-600 mt-1">✓ {fileName}</p>
+      )}
+      {error && (
+        <p className="text-xs text-red-500 mt-1">⚠ {error} <button type="button" onClick={() => { setError(''); if (inputRef.current) inputRef.current.value = '' }} className="underline ml-1">Try again</button></p>
       )}
     </div>
   )

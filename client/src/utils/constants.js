@@ -25,8 +25,18 @@ export const ROLES = {
   class_teacher:   'Class Teacher',
   coordinator:     'Coordinator',
   principal:       'Principal',
-  supervisor:      'Supervisor',
+  supervisor:      'VOX-O6 Overseer',
   vice_principal:  'Vice Principal',
+}
+
+// VOX-O6 supervisor team designations (by scholar_no)
+export const VOX_O6_TITLES = {
+  '5411': 'School President',
+  '5412': 'Head Girl',
+  '5413': 'Head Boy',
+  '5414': 'Secretary — Boys Council',
+  '5415': 'Secretary — Girls Council',
+  '5416': 'Joint Secretary',
 }
 
 // Brand palette — updated to forest green theme

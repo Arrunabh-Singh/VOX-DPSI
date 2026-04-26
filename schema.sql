@@ -91,3 +91,28 @@ CREATE TABLE IF NOT EXISTS escalations (
 
 -- ── STORAGE BUCKET ────────────────────────────────────────────────────────────
 -- Run in Supabase dashboard → Storage → Create bucket named "attachments" (public)
+
+-- Suggestions table (Suggestion Box feature)
+CREATE TABLE IF NOT EXISTS suggestions (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  submitted_by UUID REFERENCES users(id),
+  title        TEXT NOT NULL,
+  body         TEXT NOT NULL,
+  category     TEXT DEFAULT 'general' CHECK (category IN ('general', 'ui', 'feature', 'bug', 'other')),
+  status       TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'acknowledged', 'under_review', 'implemented', 'dismissed')),
+  reviewer_note TEXT,
+  reviewed_by  UUID REFERENCES users(id),
+  reviewed_at  TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_complaints_student_id ON complaints(student_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_council_member_id ON complaints(assigned_council_member_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_current_handler_role ON complaints(current_handler_role);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+CREATE INDEX IF NOT EXISTS idx_complaints_created_at ON complaints(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_complaint_timeline_complaint_id ON complaint_timeline(complaint_id);
+CREATE INDEX IF NOT EXISTS idx_suggestions_submitted_by ON suggestions(submitted_by);

@@ -20,17 +20,29 @@ router.post('/', verifyToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file provided' })
 
-    const ext = req.file.originalname.split('.').pop()
-    const fileName = `complaints/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const ext = (req.file.originalname.split('.').pop() || 'bin').toLowerCase()
+    const safeExt = ['jpg','jpeg','png','gif','webp','pdf','doc','docx'].includes(ext) ? ext : 'bin'
+    const fileName = `complaints/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`
+
+    // Ensure bucket exists (create if not)
+    const { data: buckets } = await supabase.storage.listBuckets()
+    const bucketExists = (buckets || []).some(b => b.name === 'attachments')
+    if (!bucketExists) {
+      await supabase.storage.createBucket('attachments', { public: true })
+    }
 
     const { data, error } = await supabase.storage
       .from('attachments')
       .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: false,
+        cacheControl: '3600',
       })
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase storage error:', error)
+      return res.status(500).json({ error: 'Storage upload failed: ' + error.message })
+    }
 
     const { data: { publicUrl } } = supabase.storage
       .from('attachments')
@@ -39,7 +51,7 @@ router.post('/', verifyToken, upload.single('file'), async (req, res) => {
     res.json({ url: publicUrl, path: fileName })
   } catch (err) {
     console.error('Upload error:', err)
-    res.status(500).json({ error: 'Upload failed: ' + err.message })
+    res.status(500).json({ error: 'Upload failed: ' + (err.message || 'Unknown error') })
   }
 })
 

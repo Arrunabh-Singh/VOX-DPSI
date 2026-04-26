@@ -103,7 +103,9 @@ export default function ComplaintCard({ complaint }) {
       {/* Bottom row */}
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>Raised {timeAgo(complaint.created_at)}</span>
-        <SLABadge updatedAt={complaint.updated_at || complaint.created_at} status={complaint.status} />
+        {!['student', 'council_member'].includes(user?.role) && (
+          <SLABadge updatedAt={complaint.updated_at || complaint.created_at} status={complaint.status} />
+        )}
       </div>
     </div>
   )

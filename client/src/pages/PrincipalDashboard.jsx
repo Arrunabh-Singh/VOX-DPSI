@@ -145,15 +145,38 @@ export default function PrincipalDashboard() {
     .filter(c => !statusFilter || c.status === statusFilter)
     .filter(c => !domainFilter || c.domain === domainFilter)
     .filter(c => {
-      if (!searchQuery) return true
-      const q = searchQuery.toLowerCase()
+      if (!searchQuery || searchQuery.trim().length < 2) return true
+      const q = searchQuery.toLowerCase().trim()
+      // Fuzzy: check if each word in query appears somewhere in the target
+      const fuzzyMatch = (target, query) => {
+        if (!target) return false
+        const t = target.toLowerCase()
+        // Exact substring match
+        if (t.includes(query)) return true
+        // Word-level match (allows partial word errors)
+        return query.split('').every((ch, i) => {
+          const pos = t.indexOf(ch)
+          return pos !== -1
+        }) && (
+          // Tolerate 1 typo: at least 80% of query chars found in sequence
+          (() => {
+            let tIdx = 0, matches = 0
+            for (const ch of query) {
+              const pos = t.indexOf(ch, tIdx)
+              if (pos !== -1) { matches++; tIdx = pos + 1 }
+            }
+            return matches / query.length >= 0.8
+          })()
+        )
+      }
       return (
-        (c.complaint_no_display || '').toLowerCase().includes(q) ||
-        (c.description || '').toLowerCase().includes(q) ||
-        (c.student?.name || '').toLowerCase().includes(q) ||
-        (c.student?.scholar_no || '').toLowerCase().includes(q) ||
-        (c.student?.section || '').toLowerCase().includes(q) ||
-        (c.domain || '').toLowerCase().includes(q)
+        fuzzyMatch(c.complaint_no_display, q) ||
+        fuzzyMatch(c.description, q) ||
+        fuzzyMatch(c.student?.name, q) ||
+        fuzzyMatch(c.student?.scholar_no, q) ||
+        fuzzyMatch(c.student?.section, q) ||
+        fuzzyMatch(c.domain, q) ||
+        fuzzyMatch(c.status?.replace(/_/g, ' '), q)
       )
     })
 

@@ -7,6 +7,7 @@ import ComplaintCard from '../components/ComplaintCard'
 import Footer from '../components/Footer'
 import { SkeletonList } from '../components/SkeletonCard'
 import { STATUSES } from '../utils/constants'
+import SuggestionBox from '../components/SuggestionBox'
 
 export default function StudentDashboard() {
   const { user } = useAuth()
@@ -78,8 +79,13 @@ export default function StudentDashboard() {
           </div>
         )}
 
+        {/* Suggestion Box */}
+        <div className="mt-6">
+          <SuggestionBox />
+        </div>
+
         {/* Status legend */}
-        <div className="mt-8 glass rounded-2xl p-5">
+        <div className="mt-6 glass rounded-2xl p-5">
           <h3 className="font-bold text-sm mb-3 uppercase tracking-wide" style={{ color: '#2d5c26' }}>Status Guide</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {Object.entries(STATUSES).map(([key, val]) => (

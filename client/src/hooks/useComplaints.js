@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 
 // ── In-memory cache shared across all hook instances ──────────────────────────
 const cache = { data: null, ts: 0 }
-const STALE_MS = 20_000 // 20 seconds — serve cached data instantly, background refresh
+const STALE_MS = 30_000 // 30 seconds — serve cached data instantly, background refresh
 
 export function useComplaints() {
   const [complaints, setComplaints] = useState(() => cache.data || [])

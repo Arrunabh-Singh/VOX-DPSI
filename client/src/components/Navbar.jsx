@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { ROLES } from '../utils/constants'
+import { ROLES, VOX_O6_TITLES } from '../utils/constants'
 import { VoxWordmark } from './VoxLogo'
 import NotificationBell from './NotificationBell'
 
@@ -47,14 +47,14 @@ export default function Navbar() {
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
             }}>
-              α Beta
+              α 0.2
             </span>
 
             {/* User Info — hidden on mobile, visible sm+ */}
             <div className="text-right hidden sm:block">
               <p className="font-semibold text-sm text-white leading-tight">{user.name}</p>
               <p className="text-xs font-medium" style={{ color: '#c9a84c' }}>
-                {ROLES[user.role] || user.role}
+{user.role === 'supervisor' && user.scholar_no && VOX_O6_TITLES[user.scholar_no] ? VOX_O6_TITLES[user.scholar_no] : (ROLES[user.role] || user.role)}
                 {user.scholar_no && ` · ${user.scholar_no}`}
               </p>
             </div>

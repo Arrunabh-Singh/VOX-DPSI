@@ -200,6 +200,27 @@
 
 ---
 
+## Round 16 — Alpha 0.2 Release
+
+- Version badge updated to `α 0.2` (second alpha release)
+- **Houses:** Renamed "Jal" → "Akash" across all forms and seed data
+- **Sections:** Updated to XII A–G, XI A–G (7 sections per grade for senior school)
+- **SLA badges** removed from student and council member complaint card view; visible to staff only
+- **Raise Complaint:** Header + back button redesigned; clearer CTA and subtitle
+- **Council dashboard:** Complaints now sorted by priority — overdue → urgent → in_progress → verified → raised. Council cannot escalate until after verifying (enforced). Student consent dialog always shown before revealing identity on escalation.
+- **Current Handler display:** Now shows handler's actual name and designation (not just role label). Updates dynamically as complaint is escalated.
+- **Teacher section filter:** Class teacher dashboard filters complaints by the teacher's own section if their section is set.
+- **VOX-O6:** Supervisor role expanded to a 6-person oversight team (School President, Head Boy/Girl, Secretary Boys, Secretary Girls, Joint Secretary). Each gets a designated title displayed in the navbar. 5 new supervisor demo accounts added.
+- **Suggestion Box:** New component on student dashboard — students can submit feature requests/bugs/ideas. Categorized by type. Supervisors/principal can view all submissions and update their status.
+- **Notifications:** Fixed — all handlers are notified in-app when a complaint is escalated to their role. WhatsApp integration fixed: double `whatsapp:` prefix bug resolved, FROM number now lazily evaluated from env.
+- **Search:** Fuzzy matching added to principal/coordinator dashboard — tolerates small typos and partial matches.
+- **Upload fix:** Supabase Storage bucket auto-created if missing; improved error messages and retry button in FileUpload.
+- **Performance:** Complaint cache extended to 30s; Railway keepalive ping every 4 minutes; DB indexes added for all frequently queried columns.
+- **Seed data:** Student (Rahul) now has 7 diverse complaints in various statuses for demo. Seed updated with escalation and timeline records.
+- **WhatsApp test endpoint:** `GET /api/test-whatsapp` — hit this from browser to verify Twilio integration without triggering a real event.
+
+---
+
 ## Deployment
 
 | Service | URL |
@@ -213,10 +234,10 @@
 
 ## Demo Accounts (password: `demo123`)
 
-| Role | Email | Name |
-|------|-------|------|
-| Student | `5001@student.dpsindore.org` | Rahul Sharma |
-| Council Member | `5002@student.dpsindore.org` | Priya Verma |
+| Role | Email | Name | Designation |
+|------|-------|------|-------------|
+| Student | `5001@student.dpsindore.org` | Rahul Sharma | — |
+| Council Member | `5002@student.dpsindore.org` | Priya Verma | — |
 | Class Teacher | `teacher@dpsi.com` | Mrs. Sharma |
 | Coordinator | `coordinator@dpsi.com` | Mr. Kapil |
 | Principal | `principal@dpsi.com` | Mr. Parminder Chopra |

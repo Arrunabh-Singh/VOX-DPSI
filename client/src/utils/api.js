@@ -25,4 +25,11 @@ api.interceptors.response.use(
   }
 )
 
+// Keep-alive ping to Railway every 4 minutes to prevent cold starts
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/health`, { method: 'GET', mode: 'no-cors' }).catch(() => {})
+  }, 4 * 60 * 1000)
+}
+
 export default api

@@ -8,16 +8,16 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 
 const DPS_SECTIONS = [
-  'VI A', 'VI B', 'VI C',
-  'VII A', 'VII B', 'VII C',
+  'XII A', 'XII B', 'XII C', 'XII D', 'XII E', 'XII F', 'XII G',
+  'XI A', 'XI B', 'XI C', 'XI D', 'XI E', 'XI F', 'XI G',
+  'X A', 'X B', 'X C', 'X D',
+  'IX A', 'IX B', 'IX C', 'IX D',
   'VIII A', 'VIII B', 'VIII C',
-  'IX A', 'IX B', 'IX C',
-  'X A', 'X B', 'X C',
-  'XI Science A', 'XI Science B', 'XI Commerce A',
-  'XII Science A', 'XII Science B', 'XII Commerce A',
+  'VII A', 'VII B', 'VII C',
+  'VI A', 'VI B', 'VI C',
 ]
 
-const DPS_HOUSES = ['Prithvi', 'Agni', 'Jal', 'Vayu']
+const DPS_HOUSES = ['Prithvi', 'Agni', 'Akash', 'Vayu']
 
 export default function RaiseComplaint() {
   const navigate = useNavigate()
@@ -109,18 +109,18 @@ export default function RaiseComplaint() {
       <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-6">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-xl transition-colors font-medium text-sm"
-            style={{ color: '#2d5c26' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#DCFCE7'}
-            onMouseLeave={e => e.currentTarget.style.background = ''}
-          >← Back</button>
-          <div>
-            <h1 className="text-2xl font-black" style={{ color: '#2d5c26' }}>Raise a Complaint</h1>
-            <p className="text-gray-500 text-sm">Fill in the details below</p>
-          </div>
+            className="inline-flex items-center gap-1.5 text-sm font-semibold mb-4 px-3 py-2 rounded-xl transition-all"
+            style={{ color: '#2d5c26', background: 'rgba(45,92,38,0.07)', border: '1px solid rgba(45,92,38,0.12)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(45,92,38,0.13)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(45,92,38,0.07)'}
+          >
+            <span style={{ fontSize: '16px' }}>←</span> Back to Dashboard
+          </button>
+          <h1 className="text-2xl font-black" style={{ color: '#2d5c26' }}>📋 Raise a Complaint</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Fill in the details below. Your complaint will be reviewed by your council member.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

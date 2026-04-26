@@ -8,8 +8,13 @@ import Footer from '../components/Footer'
 
 export default function TeacherDashboard() {
   const { user } = useAuth()
-  const { complaints, loading } = useComplaints()
+  const { complaints: allComplaints, loading } = useComplaints()
   useEffect(() => { document.title = 'Teacher — Vox DPSI' }, [])
+
+  // If teacher has a section set, show only complaints from that section
+  const complaints = user?.section
+    ? allComplaints.filter(c => !c.student?.section || c.student.section === user.section)
+    : allComplaints
 
   const stats = [
     { label: 'Escalated to You', value: complaints.length,                                        color: '#EA580C' },
