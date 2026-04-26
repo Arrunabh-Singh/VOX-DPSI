@@ -63,19 +63,42 @@ export default function ComplaintCard({ complaint }) {
         <DomainBadge domain={complaint.domain} />
       </div>
 
-      {/* Student name (for staff roles) */}
+      {/* Student name + house + section (for staff roles) */}
       {showStudentName && (
-        <p className="text-sm font-semibold mb-1" style={{ color: '#374151' }}>
-          {studentName}
-          {complaint.student?.scholar_no && (
-            <span className="text-gray-400 font-normal"> · {complaint.student.scholar_no}</span>
+        <div className="mb-1">
+          <p className="text-sm font-semibold" style={{ color: '#374151' }}>
+            {studentName}
+            {complaint.student?.scholar_no && (
+              <span className="text-gray-400 font-normal"> · {complaint.student.scholar_no}</span>
+            )}
+            {isAnon && <span className="text-purple-500 font-normal"> (Anon Requested)</span>}
+          </p>
+          {(complaint.student?.house || complaint.student?.section) && (
+            <p className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap">
+              {complaint.student?.house && (
+                <span className="font-semibold" style={{ color: '#c9a84c' }}>🏠 {complaint.student.house}</span>
+              )}
+              {complaint.student?.house && complaint.student?.section && (
+                <span className="text-gray-300">·</span>
+              )}
+              {complaint.student?.section && (
+                <span className="text-gray-500 font-medium">{complaint.student.section}</span>
+              )}
+            </p>
           )}
-          {isAnon && <span className="text-purple-500 font-normal"> (Anon Requested)</span>}
-        </p>
+        </div>
       )}
 
       {/* Description snippet */}
-      <p className="text-sm text-gray-500 line-clamp-2 mb-3">{complaint.description}</p>
+      <p className="text-sm text-gray-500 line-clamp-2 mb-2">{complaint.description}</p>
+
+      {/* Assigned council member (student view) */}
+      {user?.role === 'student' && complaint.council_member?.name && (
+        <p className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>
+          <span style={{ color: '#9CA3AF' }}>Assigned to: </span>
+          <span style={{ color: '#2d5c26', fontWeight: '600' }}>{complaint.council_member.name}</span>
+        </p>
+      )}
 
       {/* Bottom row */}
       <div className="flex items-center justify-between text-xs text-gray-400">

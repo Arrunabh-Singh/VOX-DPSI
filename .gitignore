@@ -16,3 +16,5 @@ client/.env
 server/run_schema.mjs
 
 .vercel
+.fuse_hidden*
+SEED_MIGRATION.sql

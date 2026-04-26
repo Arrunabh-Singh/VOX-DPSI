@@ -5,9 +5,23 @@ import FileUpload from '../components/FileUpload'
 import { DOMAINS } from '../utils/constants'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
+
+const DPS_SECTIONS = [
+  'VI A', 'VI B', 'VI C',
+  'VII A', 'VII B', 'VII C',
+  'VIII A', 'VIII B', 'VIII C',
+  'IX A', 'IX B', 'IX C',
+  'X A', 'X B', 'X C',
+  'XI Science A', 'XI Science B', 'XI Commerce A',
+  'XII Science A', 'XII Science B', 'XII Commerce A',
+]
+
+const DPS_HOUSES = ['Prithvi', 'Agni', 'Jal', 'Vayu']
 
 export default function RaiseComplaint() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   useEffect(() => { document.title = 'Raise a Complaint — Vox DPSI' }, [])
   const [domain, setDomain]           = useState('')
   const [description, setDescription] = useState('')
@@ -16,6 +30,8 @@ export default function RaiseComplaint() {
   const [priority, setPriority]       = useState('normal')
   const [loading, setLoading]         = useState(false)
   const [success, setSuccess]         = useState(null)
+  const [section, setSection]         = useState(user?.section || '')
+  const [house, setHouse]             = useState(user?.house || '')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -23,6 +39,14 @@ export default function RaiseComplaint() {
     if (description.length < 50) return toast.error('Description must be at least 50 characters')
     setLoading(true)
     try {
+      // If student updated their house/section, sync to profile
+      if ((house && house !== user?.house) || (section && section !== user?.section)) {
+        const updates = {}
+        if (house && house !== user?.house) updates.house = house
+        if (section && section !== user?.section) updates.section = section
+        await api.patch('/api/users/me', updates).catch(() => {}) // fire-and-forget
+      }
+
       const res = await api.post('/api/complaints', {
         domain, description, priority,
         is_anonymous_requested: isAnonymous,
@@ -119,6 +143,47 @@ export default function RaiseComplaint() {
                   <span>{d.icon}</span><span>{d.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* House & Section */}
+          <div className="glass rounded-2xl p-6">
+            <label className="block text-sm font-bold mb-3" style={{ color: '#2d5c26' }}>
+              Your House &amp; Class
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* House */}
+              <div>
+                <p className="text-xs text-gray-400 mb-1.5 font-medium">House</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {DPS_HOUSES.map(h => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setHouse(h)}
+                      className="py-2 px-2 rounded-xl border-2 transition-all text-xs font-bold"
+                      style={house === h
+                        ? { borderColor: '#c9a84c', background: '#FFFBEB', color: '#92400E' }
+                        : { borderColor: '#E5E7EB', color: '#6B7280', background: 'transparent' }}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Section */}
+              <div>
+                <p className="text-xs text-gray-400 mb-1.5 font-medium">Class / Section</p>
+                <select
+                  value={section}
+                  onChange={e => setSection(e.target.value)}
+                  className="w-full rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none h-full"
+                  style={{ border: '1.5px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.8)', color: section ? '#374151' : '#9CA3AF', maxHeight: '120px' }}
+                >
+                  <option value="">Select class...</option>
+                  {DPS_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 

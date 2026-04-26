@@ -50,4 +50,32 @@ router.post('/', verifyToken, allowRoles('principal', 'coordinator'), async (req
   }
 })
 
+// PATCH /api/users/me — update own profile (house, section, phone)
+router.patch('/me', verifyToken, async (req, res) => {
+  try {
+    const { house, section, phone } = req.body
+    const allowed = {}
+    if (house)   allowed.house   = house
+    if (section) allowed.section = section
+    if (phone)   allowed.phone   = phone
+
+    if (Object.keys(allowed).length === 0) {
+      return res.status(400).json({ error: 'No updatable fields provided' })
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(allowed)
+      .eq('id', req.user.id)
+      .select('id, name, email, role, scholar_no, section, house, phone')
+      .single()
+
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    console.error('Update profile error:', err)
+    res.status(500).json({ error: 'Failed to update profile' })
+  }
+})
+
 export default router

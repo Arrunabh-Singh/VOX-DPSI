@@ -123,7 +123,7 @@ router.get('/', verifyToken, async (req, res) => {
     const { role, id: userId } = req.user
     let query = supabase.from('complaints').select(`
       *,
-      student:student_id (id, name, scholar_no, section),
+      student:student_id (id, name, scholar_no, section, house),
       council_member:assigned_council_member_id (id, name),
       supervisor:supervisor_id (id, name)
     `).order('created_at', { ascending: false })

@@ -93,23 +93,29 @@ export default function AnalyticsDashboard({ complaints }) {
 
   // Performance score for council members
   const councilStats = complaints.reduce((acc, c) => {
+    const id = c.council_member?.id
     const name = c.council_member?.name
-    if (!name) return acc
-    if (!acc[name]) acc[name] = { name, total: 0, resolved: 0, overdue: 0 }
-    acc[name].total++
-    if (['resolved','closed'].includes(c.status)) acc[name].resolved++
+    if (!id || !name) return acc
+    if (!acc[id]) acc[id] = { id, name, total: 0, resolved: 0, overdue: 0, inProgress: 0 }
+    acc[id].total++
+    if (['resolved','closed'].includes(c.status)) acc[id].resolved++
+    if (c.status === 'in_progress') acc[id].inProgress++
     const hrs = (Date.now() - new Date(c.created_at).getTime()) / 3600000
-    if (hrs > 48 && !['resolved','closed'].includes(c.status)) acc[name].overdue++
+    if (hrs > 48 && !['resolved','closed'].includes(c.status)) acc[id].overdue++
     return acc
   }, {})
 
   const performanceData = Object.values(councilStats).map(m => ({
-    name: m.name.split(' ')[0],
+    name: m.name,
+    shortName: m.name.split(' ').map((w, i) => i === 0 ? w : w[0] + '.').join(' '),
     Score: m.total > 0
       ? Math.max(0, Math.round((m.resolved / m.total) * 100 - m.overdue * 10))
       : 0,
     Resolved: m.resolved,
+    Active: m.inProgress,
+    Overdue: m.overdue,
     Total: m.total,
+    rate: m.total > 0 ? Math.round((m.resolved / m.total) * 100) : 0,
   })).sort((a, b) => b.Score - a.Score)
 
   return (
@@ -195,28 +201,71 @@ export default function AnalyticsDashboard({ complaints }) {
         </div>
       </div>
 
-      {/* Performance Scores */}
-      {performanceData.length > 0 && (
+      {/* Council Member Performance */}
+      {performanceData.length > 0 ? (
         <div className="glass rounded-2xl p-5">
-          <h3 className="font-bold mb-1 text-sm uppercase tracking-wide" style={{ color: '#2d5c26' }}>Council Member Performance</h3>
-          <p className="text-xs text-gray-400 mb-4">Score = (resolved/total × 100) − (overdue × 10)</p>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2d5c26' }}>Council Member Performance</h3>
+          </div>
+          <p className="text-xs text-gray-400 mb-5">Performance score = resolution rate − (overdue penalty × 10). Higher is better.</p>
+
+          {/* Bar chart */}
+          <div className="mb-5">
+            <ResponsiveContainer width="100%" height={performanceData.length * 52 + 20}>
+              <BarChart data={performanceData} layout="vertical" margin={{ left: 10, right: 50, top: 4, bottom: 4 }}>
+                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={v => `${v}`} />
+                <YAxis type="category" dataKey="shortName" width={100} tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0]?.payload
+                  return (
+                    <div style={{ background: '#fff', border: '1px solid rgba(45,92,38,0.15)', borderRadius: '12px', padding: '10px 14px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+                      <p style={{ fontWeight: '700', color: '#2d5c26', fontSize: '13px', marginBottom: '6px' }}>{d?.name}</p>
+                      <p style={{ fontSize: '12px', color: '#374151' }}>Score: <strong style={{ color: d?.Score >= 70 ? '#16A34A' : d?.Score >= 40 ? '#D97706' : '#DC2626' }}>{d?.Score}</strong></p>
+                      <p style={{ fontSize: '12px', color: '#374151' }}>Resolved: <strong>{d?.Resolved}/{d?.Total}</strong> ({d?.rate}%)</p>
+                      {d?.Active > 0 && <p style={{ fontSize: '12px', color: '#374151' }}>Active: <strong>{d?.Active}</strong></p>}
+                      {d?.Overdue > 0 && <p style={{ fontSize: '12px', color: '#DC2626' }}>Overdue: <strong>{d?.Overdue}</strong></p>}
+                    </div>
+                  )
+                }} />
+                <Bar dataKey="Score" radius={[0, 8, 8, 0]} maxBarSize={28}>
+                  {performanceData.map((m, i) => (
+                    <Cell key={i} fill={m.Score >= 70 ? '#16A34A' : m.Score >= 40 ? '#D97706' : '#DC2626'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Detail cards */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {performanceData.map(m => (
               <div key={m.name} className="rounded-xl px-4 py-3" style={{ background: 'rgba(45,92,38,0.04)', border: '1px solid rgba(45,92,38,0.1)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm" style={{ color: '#2d5c26' }}>{m.name}</span>
-                  <span className="text-lg font-black" style={{ color: m.Score >= 70 ? '#16A34A' : m.Score >= 40 ? '#D97706' : '#DC2626' }}>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <span className="font-bold text-sm leading-tight" style={{ color: '#2d5c26' }}>{m.name}</span>
+                  <span className="text-xl font-black flex-shrink-0" style={{ color: m.Score >= 70 ? '#16A34A' : m.Score >= 40 ? '#D97706' : '#DC2626' }}>
                     {m.Score}
                   </span>
                 </div>
-                <div className="w-full rounded-full h-2" style={{ background: '#E5E7EB' }}>
+                <div className="w-full rounded-full h-2 mb-2" style={{ background: '#E5E7EB' }}>
                   <div className="h-2 rounded-full transition-all"
                     style={{ width: `${Math.min(m.Score, 100)}%`, background: m.Score >= 70 ? '#16A34A' : m.Score >= 40 ? '#D97706' : '#DC2626' }} />
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">{m.Resolved}/{m.Total} resolved</p>
+                <div className="flex gap-3 text-xs">
+                  <span style={{ color: '#16A34A', fontWeight: 600 }}>{m.Resolved} resolved</span>
+                  {m.Active > 0 && <span style={{ color: '#4F46E5', fontWeight: 600 }}>{m.Active} active</span>}
+                  {m.Overdue > 0 && <span style={{ color: '#DC2626', fontWeight: 600 }}>{m.Overdue} overdue</span>}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{m.Total} total · {m.rate}% resolution rate</p>
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="glass rounded-2xl p-8 text-center">
+          <p className="text-4xl mb-2">📊</p>
+          <p className="font-bold text-gray-600 mb-1">Council Performance</p>
+          <p className="text-sm text-gray-400">Performance data will appear once complaints are assigned to council members.</p>
         </div>
       )}
     </div>
