@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
@@ -129,6 +129,15 @@ export default function PrincipalDashboard() {
   const [appeals, setAppeals] = useState([])
   const [appealsLoading, setAppealsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const searchTimer = useRef(null)
+  const handleSearchChange = useCallback((e) => {
+    const val = e.target.value
+    setSearchQuery(val)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setDebouncedSearch(val), 200)
+  }, [])
+
   useEffect(() => { document.title = 'Principal Overview — Vox DPSI' }, [])
 
   useEffect(() => {
@@ -141,51 +150,42 @@ export default function PrincipalDashboard() {
     }
   }, [activeTab])
 
-  const filtered = complaints
-    .filter(c => !statusFilter || c.status === statusFilter)
-    .filter(c => !domainFilter || c.domain === domainFilter)
-    .filter(c => {
-      if (!searchQuery || searchQuery.trim().length < 2) return true
-      const q = searchQuery.toLowerCase().trim()
-      // Fuzzy: check if each word in query appears somewhere in the target
-      const fuzzyMatch = (target, query) => {
-        if (!target) return false
-        const t = target.toLowerCase()
-        // Exact substring match
-        if (t.includes(query)) return true
-        // Word-level match (allows partial word errors)
-        return query.split('').every((ch, i) => {
-          const pos = t.indexOf(ch)
-          return pos !== -1
-        }) && (
-          // Tolerate 1 typo: at least 80% of query chars found in sequence
-          (() => {
-            let tIdx = 0, matches = 0
-            for (const ch of query) {
-              const pos = t.indexOf(ch, tIdx)
-              if (pos !== -1) { matches++; tIdx = pos + 1 }
-            }
-            return matches / query.length >= 0.8
-          })()
-        )
+  const filtered = useMemo(() => {
+    const fuzzyMatch = (target, query) => {
+      if (!target) return false
+      const t = target.toLowerCase()
+      if (t.includes(query)) return true
+      let tIdx = 0, matches = 0
+      for (const ch of query) {
+        const pos = t.indexOf(ch, tIdx)
+        if (pos !== -1) { matches++; tIdx = pos + 1 }
       }
-      return (
-        fuzzyMatch(c.complaint_no_display, q) ||
-        fuzzyMatch(c.description, q) ||
-        fuzzyMatch(c.student?.name, q) ||
-        fuzzyMatch(c.student?.scholar_no, q) ||
-        fuzzyMatch(c.student?.section, q) ||
-        fuzzyMatch(c.domain, q) ||
-        fuzzyMatch(c.status?.replace(/_/g, ' '), q)
-      )
-    })
+      return matches / query.length >= 0.8
+    }
+    const q = debouncedSearch.toLowerCase().trim()
+    return complaints
+      .filter(c => !statusFilter || c.status === statusFilter)
+      .filter(c => !domainFilter || c.domain === domainFilter)
+      .filter(c => {
+        if (!q || q.length < 2) return true
+        return (
+          fuzzyMatch(c.complaint_no_display, q) ||
+          fuzzyMatch(c.description, q) ||
+          fuzzyMatch(c.student?.name, q) ||
+          fuzzyMatch(c.student?.scholar_no, q) ||
+          fuzzyMatch(c.student?.section, q) ||
+          fuzzyMatch(c.domain, q) ||
+          fuzzyMatch(c.status?.replace(/_/g, ' '), q)
+        )
+      })
+  }, [complaints, statusFilter, domainFilter, debouncedSearch])
 
-  const stats = {
+  const stats = useMemo(() => ({
     total:       complaints.length,
     resolved:    complaints.filter(c => c.status === 'resolved' || c.status === 'closed').length,
     pending:     complaints.filter(c => !['resolved', 'closed'].includes(c.status)).length,
     toPrincipal: complaints.filter(c => c.status === 'escalated_to_principal').length,
-  }
+  }), [complaints])
 
   const exportCSV = () => {
     const headers = ['Complaint No', 'Domain', 'Priority', 'Status', 'Student', 'Scholar No', 'Section', 'Date', 'Description']
@@ -255,7 +255,7 @@ export default function PrincipalDashboard() {
             <div className="mb-3">
               <input
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder="🔍 Search by complaint no, student name, section, or keyword..."
                 className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
                 style={{ border: '1.5px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.9)', color: '#1A1A1A' }}

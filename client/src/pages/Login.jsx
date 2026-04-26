@@ -166,7 +166,7 @@ export default function Login() {
         </div>
 
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', textAlign: 'center', marginTop: '20px' }}>
-          Beta v1.0 · Built by the Student Council, DPS Indore
+          Built by the Student Council, DPS Indore
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useComplaints } from '../hooks/useComplaints'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
@@ -6,6 +6,7 @@ import ComplaintCard from '../components/ComplaintCard'
 import { SkeletonList } from '../components/SkeletonCard'
 import Footer from '../components/Footer'
 import { DOMAINS } from '../utils/constants'
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
 
 const STATUS_FILTERS = [
   { key: '', label: 'All' },
@@ -20,11 +21,13 @@ export default function CoordinatorDashboard() {
   const { complaints, loading } = useComplaints()
   const [statusFilter, setStatusFilter] = useState('')
   const [domainFilter, setDomainFilter] = useState('')
+  const [activeTab, setActiveTab] = useState('complaints')
   useEffect(() => { document.title = 'Coordinator — Vox DPSI' }, [])
 
-  const filtered = complaints
+  const filtered = useMemo(() => complaints
     .filter(c => !statusFilter || c.status === statusFilter)
-    .filter(c => !domainFilter || c.domain === domainFilter)
+    .filter(c => !domainFilter || c.domain === domainFilter),
+  [complaints, statusFilter, domainFilter])
 
   const stats = [
     { label: 'Total',           value: complaints.length,                                                      color: '#2d5c26' },
@@ -51,42 +54,62 @@ export default function CoordinatorDashboard() {
           ))}
         </div>
 
-        <div className="flex gap-3 mb-5 flex-wrap">
-          <div className="flex gap-2 overflow-x-auto">
-            {STATUS_FILTERS.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setStatusFilter(f.key)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
-                style={statusFilter === f.key
-                  ? { background: '#2d5c26', color: '#fff' }
-                  : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}
-              >{f.label}</button>
-            ))}
-          </div>
-          <select
-            value={domainFilter}
-            onChange={e => setDomainFilter(e.target.value)}
-            className="rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none"
-            style={{ border: '1px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.8)', color: '#2d5c26' }}
-          >
-            <option value="">All Domains</option>
-            {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
-          </select>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-5">
+          {[{ key: 'complaints', label: '📋 Complaints' }, { key: 'analytics', label: '📊 Analytics' }].map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={activeTab === t.key
+                ? { background: '#2d5c26', color: '#c9a84c' }
+                : { background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {loading ? (
-          <SkeletonList count={3} />
-        ) : filtered.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center">
-            <p className="text-5xl mb-3">📭</p>
-            <h3 className="font-bold text-gray-700 text-lg">No complaints match your filters</h3>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map(c => <ComplaintCard key={c.id} complaint={c} />)}
-          </div>
+        {activeTab === 'complaints' && (
+          <>
+            <div className="flex gap-3 mb-5 flex-wrap">
+              <div className="flex gap-2 overflow-x-auto">
+                {STATUS_FILTERS.map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setStatusFilter(f.key)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
+                    style={statusFilter === f.key
+                      ? { background: '#2d5c26', color: '#fff' }
+                      : { background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}
+                  >{f.label}</button>
+                ))}
+              </div>
+              <select
+                value={domainFilter}
+                onChange={e => setDomainFilter(e.target.value)}
+                className="rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none"
+                style={{ border: '1px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.8)', color: '#2d5c26' }}
+              >
+                <option value="">All Domains</option>
+                {Object.entries(DOMAINS).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.label}</option>)}
+              </select>
+              <span className="text-xs text-gray-400 font-medium ml-auto self-center">{filtered.length} of {complaints.length}</span>
+            </div>
+
+            {loading ? (
+              <SkeletonList count={3} />
+            ) : filtered.length === 0 ? (
+              <div className="glass rounded-2xl p-12 text-center">
+                <p className="text-5xl mb-3">📭</p>
+                <h3 className="font-bold text-gray-700 text-lg">No complaints match your filters</h3>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map(c => <ComplaintCard key={c.id} complaint={c} />)}
+              </div>
+            )}
+          </>
         )}
+
+        {activeTab === 'analytics' && <AnalyticsDashboard complaints={complaints} />}
       </main>
       <Footer />
     </div>

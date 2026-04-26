@@ -35,20 +35,6 @@ export default function Navbar() {
           <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell />
 
-            {/* Alpha Badge — hidden on mobile, shown on sm+ */}
-            <span className="hidden sm:inline-flex" style={{
-              background: 'rgba(201,168,76,0.12)',
-              border: '1px solid rgba(201,168,76,0.5)',
-              color: '#c9a84c',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '2px 9px',
-              borderRadius: '20px',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-            }}>
-              α 0.2
-            </span>
 
             {/* User Info — hidden on mobile, visible sm+ */}
             <div className="text-right hidden sm:block">

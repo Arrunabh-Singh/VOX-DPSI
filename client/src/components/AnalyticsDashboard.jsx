@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -33,90 +34,67 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function AnalyticsDashboard({ complaints }) {
-  // --- Compute analytics ---
-  const total = complaints.length
-  const resolved = complaints.filter(c => ['resolved','closed'].includes(c.status)).length
-  const pending = total - resolved
-  const urgent = complaints.filter(c => c.priority === 'urgent').length
-  const appealed = complaints.filter(c => c.status === 'appealed').length
+  const analytics = useMemo(() => {
+    const total = complaints.length
+    const resolved = complaints.filter(c => ['resolved','closed'].includes(c.status)).length
+    const pending = total - resolved
+    const urgent = complaints.filter(c => c.priority === 'urgent').length
+    const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0
 
-  // Resolution rate
-  const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0
+    const resolvedComplaints = complaints.filter(c => ['resolved','closed'].includes(c.status))
+    const avgResolutionMs = resolvedComplaints.length > 0
+      ? resolvedComplaints.reduce((sum, c) => sum + (new Date(c.updated_at) - new Date(c.created_at)), 0) / resolvedComplaints.length
+      : 0
+    const avgResolutionHrs = Math.round(avgResolutionMs / 3600000)
 
-  // Avg resolution time (resolved complaints only)
-  const resolvedComplaints = complaints.filter(c => ['resolved','closed'].includes(c.status))
-  const avgResolutionMs = resolvedComplaints.length > 0
-    ? resolvedComplaints.reduce((sum, c) => sum + (new Date(c.updated_at) - new Date(c.created_at)), 0) / resolvedComplaints.length
-    : 0
-  const avgResolutionHrs = Math.round(avgResolutionMs / 3600000)
+    const domainData = Object.entries(DOMAINS).map(([key, d]) => ({
+      name: d.label, value: complaints.filter(c => c.domain === key).length, color: d.color,
+    })).filter(d => d.value > 0)
 
-  // Domain breakdown for pie chart
-  const domainData = Object.entries(DOMAINS).map(([key, d]) => ({
-    name: d.label,
-    value: complaints.filter(c => c.domain === key).length,
-    color: d.color,
-  })).filter(d => d.value > 0)
+    const statusData = Object.entries(STATUSES)
+      .map(([key, s]) => ({
+        name: s.label.replace('Escalated to ', 'Esc→'),
+        value: complaints.filter(c => c.status === key).length,
+        color: s.color,
+      })).filter(d => d.value > 0)
 
-  // Status breakdown for bar chart
-  const statusData = Object.entries(STATUSES)
-    .map(([key, s]) => ({
-      name: s.label.replace('Escalated to ', 'Esc→'),
-      value: complaints.filter(c => c.status === key).length,
-      color: s.color,
-    }))
-    .filter(d => d.value > 0)
+    const now = Date.now()
+    const timelineData = Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(now - (6 - i) * 86400000)
+      const label = day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
+      const end = start + 86400000
+      const count = complaints.filter(c => { const t = new Date(c.created_at).getTime(); return t >= start && t < end }).length
+      return { name: label, Raised: count }
+    })
 
-  // Complaints over time (last 7 days)
-  const now = Date.now()
-  const timelineData = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(now - (6 - i) * 86400000)
-    const label = day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
-    const end = start + 86400000
-    const count = complaints.filter(c => {
-      const t = new Date(c.created_at).getTime()
-      return t >= start && t < end
-    }).length
-    return { name: label, Raised: count }
-  })
+    const sectionCounts = complaints.reduce((acc, c) => { const sec = c.student?.section || 'Unknown'; acc[sec] = (acc[sec] || 0) + 1; return acc }, {})
+    const sectionData = Object.entries(sectionCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }))
 
-  // Section breakdown (top 6)
-  const sectionCounts = complaints.reduce((acc, c) => {
-    const sec = c.student?.section || 'Unknown'
-    acc[sec] = (acc[sec] || 0) + 1
-    return acc
-  }, {})
-  const sectionData = Object.entries(sectionCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map(([name, value]) => ({ name, value }))
+    const councilStats = complaints.reduce((acc, c) => {
+      const id = c.council_member?.id; const name = c.council_member?.name
+      if (!id || !name) return acc
+      if (!acc[id]) acc[id] = { id, name, total: 0, resolved: 0, overdue: 0, inProgress: 0 }
+      acc[id].total++
+      if (['resolved','closed'].includes(c.status)) acc[id].resolved++
+      if (c.status === 'in_progress') acc[id].inProgress++
+      const hrs = (Date.now() - new Date(c.created_at).getTime()) / 3600000
+      if (hrs > 48 && !['resolved','closed'].includes(c.status)) acc[id].overdue++
+      return acc
+    }, {})
 
-  // Performance score for council members
-  const councilStats = complaints.reduce((acc, c) => {
-    const id = c.council_member?.id
-    const name = c.council_member?.name
-    if (!id || !name) return acc
-    if (!acc[id]) acc[id] = { id, name, total: 0, resolved: 0, overdue: 0, inProgress: 0 }
-    acc[id].total++
-    if (['resolved','closed'].includes(c.status)) acc[id].resolved++
-    if (c.status === 'in_progress') acc[id].inProgress++
-    const hrs = (Date.now() - new Date(c.created_at).getTime()) / 3600000
-    if (hrs > 48 && !['resolved','closed'].includes(c.status)) acc[id].overdue++
-    return acc
-  }, {})
+    const performanceData = Object.values(councilStats).map(m => ({
+      name: m.name,
+      shortName: m.name.split(' ').map((w, i) => i === 0 ? w : w[0] + '.').join(' '),
+      Score: m.total > 0 ? Math.max(0, Math.round((m.resolved / m.total) * 100 - m.overdue * 10)) : 0,
+      Resolved: m.resolved, Active: m.inProgress, Overdue: m.overdue, Total: m.total,
+      rate: m.total > 0 ? Math.round((m.resolved / m.total) * 100) : 0,
+    })).sort((a, b) => b.Score - a.Score)
 
-  const performanceData = Object.values(councilStats).map(m => ({
-    name: m.name,
-    shortName: m.name.split(' ').map((w, i) => i === 0 ? w : w[0] + '.').join(' '),
-    Score: m.total > 0
-      ? Math.max(0, Math.round((m.resolved / m.total) * 100 - m.overdue * 10))
-      : 0,
-    Resolved: m.resolved,
-    Active: m.inProgress,
-    Overdue: m.overdue,
-    Total: m.total,
-    rate: m.total > 0 ? Math.round((m.resolved / m.total) * 100) : 0,
-  })).sort((a, b) => b.Score - a.Score)
+    return { total, resolved, pending, urgent, resolutionRate, avgResolutionHrs, domainData, statusData, timelineData, sectionData, performanceData }
+  }, [complaints])
+
+  const { total, resolved, pending, urgent, resolutionRate, avgResolutionHrs, domainData, statusData, timelineData, sectionData, performanceData } = analytics
 
   return (
     <div className="space-y-6">

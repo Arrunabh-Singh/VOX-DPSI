@@ -173,6 +173,50 @@ function DeletionRequestsView({ deletions, loading, onReviewed }) {
   )
 }
 
+// VOX-O6: 6 members share one supervisor login. Member is selected per-session.
+const VOX_O6_MEMBERS = [
+  { id: 'arrunabh', name: 'Arrunabh Singh',  title: 'School President' },
+  { id: 'ishaan',   name: 'Ishaan Mehta',    title: 'Head Boy' },
+  { id: 'kavya',    name: 'Kavya Reddy',     title: 'Head Girl' },
+  { id: 'rohan',    name: 'Rohan Gupta',     title: 'Secretary — Boys Council' },
+  { id: 'ananya',   name: 'Ananya Joshi',    title: 'Secretary — Girls Council' },
+  { id: 'dhruv',    name: 'Dhruv Patel',     title: 'Joint Secretary' },
+]
+
+function MemberSelector({ activeMember, onSelect }) {
+  const [open, setOpen] = useState(!activeMember)
+  if (!open && activeMember) return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-6" style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
+      <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm" style={{ background: '#c9a84c', color: '#fff' }}>
+        {activeMember.name.split(' ').map(n => n[0]).join('')}
+      </div>
+      <div className="flex-1">
+        <p className="font-bold text-sm" style={{ color: '#2d5c26' }}>{activeMember.name}</p>
+        <p className="text-xs text-gray-500">{activeMember.title} · VOX-O6</p>
+      </div>
+      <button onClick={() => setOpen(true)} className="text-xs font-semibold px-3 py-1.5 rounded-lg border" style={{ borderColor: 'rgba(45,92,38,0.2)', color: '#2d5c26' }}>Switch</button>
+    </div>
+  )
+  return (
+    <div className="glass rounded-2xl p-5 mb-6" style={{ border: '2px solid rgba(201,168,76,0.4)' }}>
+      <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#c9a84c' }}>VOX-O6 Shared Account</p>
+      <p className="text-sm text-gray-600 mb-4">Who is acting today? Select your name — all your actions will be recorded under it.</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {VOX_O6_MEMBERS.map(m => (
+          <button key={m.id} onClick={() => { onSelect(m); setOpen(false) }}
+            className="p-3 rounded-xl border-2 text-left transition-all"
+            style={activeMember?.id === m.id
+              ? { borderColor: '#c9a84c', background: '#FEF9EC' }
+              : { borderColor: '#E5E7EB', background: 'transparent' }}>
+            <p className="font-bold text-sm text-gray-800">{m.name}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{m.title}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SupervisorDashboard() {
   const { user } = useAuth()
   const { complaints, loading } = useComplaints()
@@ -183,6 +227,15 @@ export default function SupervisorDashboard() {
   const [appealsLoading, setAppealsLoading] = useState(false)
   const [deletions, setDeletions] = useState([])
   const [deletionsLoading, setDeletionsLoading] = useState(false)
+  // VOX-O6 active member for this session
+  const [activeMember, setActiveMember] = useState(() => {
+    const saved = sessionStorage.getItem('vox_o6_member')
+    return saved ? JSON.parse(saved) : null
+  })
+  const handleMemberSelect = (m) => {
+    setActiveMember(m)
+    sessionStorage.setItem('vox_o6_member', JSON.stringify(m))
+  }
   useEffect(() => { document.title = 'Supervisor — Vox DPSI' }, [])
 
   useEffect(() => {
@@ -236,14 +289,17 @@ export default function SupervisorDashboard() {
     <div className="min-h-screen" style={{ background: '#eae1c4' }}>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* VOX-O6 Member Selector */}
+        <MemberSelector activeMember={activeMember} onSelect={handleMemberSelect} />
+
         {/* Header card */}
         <div className="glass-dark rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.6)' }}>Supervisor View</p>
-              <h1 className="text-2xl font-black text-white mt-1">{user?.name}</h1>
+              <p className="text-sm font-medium uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.6)' }}>VOX-O6 Supervisor View</p>
+              <h1 className="text-2xl font-black text-white mt-1">{activeMember ? activeMember.name : (user?.name || 'Supervisor')}</h1>
               <p className="text-sm font-semibold mt-0.5" style={{ color: '#c9a84c' }}>
-                {user?.house} House · {user?.section}
+                {activeMember ? activeMember.title : 'Select your member above'}
               </p>
             </div>
             <div className="text-right hidden sm:block">

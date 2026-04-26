@@ -146,43 +146,47 @@ export default function RaiseComplaint() {
             </div>
           </div>
 
-          {/* House & Section */}
-          <div className="glass rounded-2xl p-6">
-            <label className="block text-sm font-bold mb-3" style={{ color: '#2d5c26' }}>
+          {/* House & Section — compact chip design */}
+          <div className="glass rounded-2xl p-4">
+            <label className="block text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#2d5c26' }}>
               Your House &amp; Class
             </label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* House */}
-              <div>
-                <p className="text-xs text-gray-400 mb-1.5 font-medium">House</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {DPS_HOUSES.map(h => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setHouse(h)}
-                      className="py-2 px-2 rounded-xl border-2 transition-all text-xs font-bold"
-                      style={house === h
-                        ? { borderColor: '#c9a84c', background: '#FFFBEB', color: '#92400E' }
-                        : { borderColor: '#E5E7EB', color: '#6B7280', background: 'transparent' }}
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
+            {/* House chips — all 4 in one row */}
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 mb-1.5">House</p>
+              <div className="flex gap-2">
+                {DPS_HOUSES.map(h => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setHouse(h)}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all border"
+                    style={house === h
+                      ? { borderColor: '#c9a84c', background: '#FEF9EC', color: '#92400E' }
+                      : { borderColor: '#E5E7EB', color: '#6B7280', background: 'transparent' }}
+                  >
+                    {h}
+                  </button>
+                ))}
               </div>
-              {/* Section */}
-              <div>
-                <p className="text-xs text-gray-400 mb-1.5 font-medium">Class / Section</p>
-                <select
-                  value={section}
-                  onChange={e => setSection(e.target.value)}
-                  className="w-full rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none h-full"
-                  style={{ border: '1.5px solid rgba(45,92,38,0.15)', background: 'rgba(255,255,255,0.8)', color: section ? '#374151' : '#9CA3AF', maxHeight: '120px' }}
-                >
-                  <option value="">Select class...</option>
-                  {DPS_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+            </div>
+            {/* Section — compact pill grid */}
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5">Class / Section</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DPS_SECTIONS.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSection(s)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all border"
+                    style={section === s
+                      ? { borderColor: '#2d5c26', background: 'rgba(45,92,38,0.1)', color: '#2d5c26', fontWeight: '700' }
+                      : { borderColor: '#E5E7EB', color: '#6B7280', background: 'transparent' }}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
