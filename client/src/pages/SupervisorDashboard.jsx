@@ -290,8 +290,8 @@ const VOX_O6_MEMBERS = [
   { id: 'arrunabh', name: 'Arrunabh Singh',  title: 'School President',          gender: 'M' },
   { id: 'ishaan',   name: 'Ishaan Mehta',    title: 'Head Boy',                  gender: 'M' },
   { id: 'kavya',    name: 'Kavya Reddy',     title: 'Head Girl',                 gender: 'F' },
-  { id: 'rohan',    name: 'Rohan Gupta',     title: 'Secretary — Boys Council',  gender: 'M' },
-  { id: 'ananya',   name: 'Ananya Joshi',    title: 'Secretary — Girls Council', gender: 'F' },
+  { id: 'rohan',    name: 'Rohan Gupta',     title: 'Secretary',  gender: 'M' },
+  { id: 'ananya',   name: 'Ananya Joshi',    title: 'Secretary',  gender: 'F' },
   { id: 'dhruv',    name: 'Dhruv Patel',     title: 'Joint Secretary',           gender: 'M' },
 ]
 
