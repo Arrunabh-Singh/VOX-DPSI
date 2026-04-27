@@ -30,7 +30,7 @@ function SupervisorAppealsView({ appeals, loading }) {
           <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-black text-sm" style={{ color: '#2d5c26' }}>{appeal.complaint?.complaint_no_display || 'VOX-???'}</span>
+                <span className="font-black text-sm" style={{ color: '#2d5c26' }}>{appeal.complaint?.complaint_no_display ? `${appeal.complaint.complaint_no_display}-Appeal` : 'VOX-???-Appeal'}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
                   style={appeal.status === 'pending' ? { background: '#EDE9FE', color: '#7C3AED' } : appeal.status === 'upheld' ? { background: '#DCFCE7', color: '#16A34A' } : { background: '#FEE2E2', color: '#DC2626' }}>
                   {appeal.status === 'pending' ? '⏳ Pending' : appeal.status === 'upheld' ? '✅ Upheld' : '❌ Rejected'}

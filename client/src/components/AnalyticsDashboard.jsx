@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-export default function AnalyticsDashboard({ complaints }) {
+export default function AnalyticsDashboard({ complaints, showCouncilPerformance = true }) {
   const analytics = useMemo(() => {
     const total = complaints.length
     const resolved = complaints.filter(c => ['resolved','closed'].includes(c.status)).length
@@ -179,8 +179,8 @@ export default function AnalyticsDashboard({ complaints }) {
         </div>
       </div>
 
-      {/* Council Member Performance */}
-      {performanceData.length > 0 ? (
+      {/* Council Member Performance — hidden for coordinator */}
+      {showCouncilPerformance && performanceData.length > 0 ? (
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2d5c26' }}>Council Member Performance</h3>
@@ -239,13 +239,13 @@ export default function AnalyticsDashboard({ complaints }) {
             ))}
           </div>
         </div>
-      ) : (
+      ) : showCouncilPerformance ? (
         <div className="glass rounded-2xl p-8 text-center">
           <p className="text-4xl mb-2">📊</p>
           <p className="font-bold text-gray-600 mb-1">Council Performance</p>
           <p className="text-sm text-gray-400">Performance data will appear once complaints are assigned to council members.</p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

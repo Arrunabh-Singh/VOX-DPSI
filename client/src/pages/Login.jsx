@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 const demoAccounts = [
-  { label: 'Student',     name: 'Rahul Sharma',         email: '5001@student.dpsindore.org', color: '#2563EB' },
-  { label: 'Council',     name: 'Priya Verma',           email: '5002@student.dpsindore.org', color: '#16A34A' },
+  { label: 'Student',     name: 'Rahul Sharma',          email: 'student@dpsi.com',           color: '#2563EB' },
+  { label: 'Council',     name: 'Priya Verma',           email: 'council@dpsi.com',           color: '#16A34A' },
   { label: 'Teacher',     name: 'Mrs. Sharma',           email: 'teacher@dpsi.com',           color: '#7C3AED' },
   { label: 'Coordinator', name: 'Mr. Kapil',             email: 'coordinator@dpsi.com',       color: '#EA580C' },
   { label: 'Principal',   name: 'Mr. Parminder Chopra',  email: 'principal@dpsi.com',         color: '#c9a84c' },

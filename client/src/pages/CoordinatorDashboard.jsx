@@ -109,7 +109,7 @@ export default function CoordinatorDashboard() {
           </>
         )}
 
-        {activeTab === 'analytics' && <AnalyticsDashboard complaints={complaints} />}
+        {activeTab === 'analytics' && <AnalyticsDashboard complaints={complaints} showCouncilPerformance={false} />}
       </main>
       <Footer />
     </div>
