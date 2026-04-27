@@ -536,7 +536,7 @@ router.post('/:id/appeal', verifyToken, async (req, res) => {
   }
 })
 
-// GET /api/appeals — supervisor/principal
+// GET /api/appeals/all — supervisor/principal/coordinator see all appeals
 router.get('/appeals/all', verifyToken, async (req, res) => {
   try {
     const { role } = req.user
@@ -545,66 +545,197 @@ router.get('/appeals/all', verifyToken, async (req, res) => {
     }
     const { data, error } = await supabase
       .from('appeals')
-      .select(`*, complaint:complaint_id(complaint_no, domain, status, description), filed_by_user:filed_by(name, scholar_no)`)
+      .select(`
+        *,
+        complaint:complaint_id(complaint_no, domain, status, description, assigned_council_member_id),
+        filed_by_user:filed_by(name, scholar_no)
+      `)
       .order('created_at', { ascending: false })
     if (error) throw error
-    res.json(data || [])
+    // Attach display complaint number
+    const result = (data || []).map(a => ({
+      ...a,
+      complaint: a.complaint ? {
+        ...a.complaint,
+        complaint_no_display: a.complaint.complaint_no ? `VOX-${String(a.complaint.complaint_no).padStart(3, '0')}` : null
+      } : null
+    }))
+    res.json(result)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch appeals' })
   }
 })
 
-// PATCH /api/appeals/:appealId/review — supervisor/principal reviews appeal
-router.patch('/appeals/:appealId/review', verifyToken, async (req, res) => {
+// GET /api/appeals/my — council member sees appeals on their assigned complaints
+router.get('/appeals/my', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'council_member') {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    // Find all complaints assigned to this council member that have an appeal
+    const { data: complaints } = await supabase
+      .from('complaints')
+      .select('id')
+      .eq('assigned_council_member_id', req.user.id)
+
+    if (!complaints || complaints.length === 0) return res.json([])
+
+    const ids = complaints.map(c => c.id)
+    const { data, error } = await supabase
+      .from('appeals')
+      .select(`
+        *,
+        complaint:complaint_id(complaint_no, domain, status, description),
+        filed_by_user:filed_by(name, scholar_no)
+      `)
+      .in('complaint_id', ids)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    const result = (data || []).map(a => ({
+      ...a,
+      complaint: a.complaint ? {
+        ...a.complaint,
+        complaint_no_display: a.complaint.complaint_no ? `VOX-${String(a.complaint.complaint_no).padStart(3, '0')}` : null
+      } : null
+    }))
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch your appeals' })
+  }
+})
+
+// PATCH /api/appeals/:appealId/vote — council_member or supervisor casts their vote
+// Body: { vote: 'uphold'|'reject', note: string, voter_label?: string (for VOX-O6 member name) }
+router.patch('/appeals/:appealId/vote', verifyToken, async (req, res) => {
   try {
     const { role, id: userId } = req.user
-    if (!['supervisor', 'principal'].includes(role)) {
+    if (!['council_member', 'supervisor', 'principal'].includes(role)) {
       return res.status(403).json({ error: 'Access denied' })
     }
     const { appealId } = req.params
-    const { decision, note } = req.body
-    if (!['upheld', 'rejected'].includes(decision)) {
-      return res.status(400).json({ error: 'Decision must be upheld or rejected' })
+    const { vote, note, voter_label } = req.body
+    if (!['uphold', 'reject'].includes(vote)) {
+      return res.status(400).json({ error: 'Vote must be uphold or reject' })
     }
     if (!note || note.trim().length < 5) {
-      return res.status(400).json({ error: 'Review note is required' })
+      return res.status(400).json({ error: 'A note is required with your vote' })
     }
 
-    const { data: appeal, error } = await supabase
+    // Fetch the current appeal
+    const { data: appeal, error: fetchErr } = await supabase
       .from('appeals')
-      .update({ status: decision, reviewer_id: userId, reviewer_note: note, resolved_at: new Date().toISOString() })
+      .select('*')
+      .eq('id', appealId)
+      .single()
+
+    if (fetchErr || !appeal) return res.status(404).json({ error: 'Appeal not found' })
+    if (!['pending', 'voting'].includes(appeal.status)) {
+      return res.status(400).json({ error: 'This appeal has already been decided' })
+    }
+
+    // Determine which voter role this is
+    const isCouncil    = role === 'council_member'
+    const isSupervisor = ['supervisor', 'principal'].includes(role)
+
+    // Guard against double-voting
+    if (isCouncil && appeal.council_vote != null) {
+      return res.status(400).json({ error: 'Council member has already voted on this appeal' })
+    }
+    if (isSupervisor && appeal.supervisor_vote != null) {
+      return res.status(400).json({ error: 'VOX-O6 has already voted on this appeal' })
+    }
+
+    // Build the update payload
+    const updatePayload = { status: 'voting', updated_at: new Date().toISOString() }
+    if (isCouncil) {
+      updatePayload.council_vote       = vote
+      updatePayload.council_vote_note  = note.trim()
+      updatePayload.council_voter_id   = userId
+    } else {
+      updatePayload.supervisor_vote       = vote
+      updatePayload.supervisor_vote_note  = note.trim()
+      updatePayload.supervisor_voter_id   = userId
+      if (voter_label) updatePayload.supervisor_voter_label = voter_label
+    }
+
+    // Determine updated votes after this submission
+    const newCouncilVote    = isCouncil    ? vote : appeal.council_vote
+    const newSupervisorVote = isSupervisor ? vote : appeal.supervisor_vote
+
+    // If both have now voted → decide outcome
+    let finalDecision = null
+    if (newCouncilVote != null && newSupervisorVote != null) {
+      // Both agree → unanimous outcome
+      if (newCouncilVote === newSupervisorVote) {
+        finalDecision = newCouncilVote === 'uphold' ? 'upheld' : 'rejected'
+      } else {
+        // Split vote → supervisor (VOX-O6 / senior authority) wins
+        finalDecision = newSupervisorVote === 'uphold' ? 'upheld' : 'rejected'
+      }
+      updatePayload.status       = finalDecision
+      updatePayload.resolved_at  = new Date().toISOString()
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('appeals')
+      .update(updatePayload)
       .eq('id', appealId)
       .select()
       .single()
 
-    if (error) throw error
+    if (updateErr) throw updateErr
 
-    // If upheld, revert complaint to in_progress
-    if (decision === 'upheld') {
-      await supabase.from('complaints')
-        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
-        .eq('id', appeal.complaint_id)
+    // Add timeline entry for this vote
+    const voterLabel = isCouncil
+      ? 'Council Member'
+      : (voter_label || 'VOX-O6 Supervisor')
 
-      await supabase.from('complaint_timeline').insert({
-        complaint_id: appeal.complaint_id,
-        action: '📋 Appeal upheld — complaint reopened',
-        performed_by: userId,
-        performed_by_role: role,
-        note: note,
-      })
-    } else {
-      await supabase.from('complaint_timeline').insert({
-        complaint_id: appeal.complaint_id,
-        action: '📋 Appeal rejected',
-        performed_by: userId,
-        performed_by_role: role,
-        note: note,
-      })
+    await supabase.from('complaint_timeline').insert({
+      complaint_id: appeal.complaint_id,
+      action: `📋 ${voterLabel} voted to ${vote === 'uphold' ? 'Uphold' : 'Reject'} the appeal`,
+      performed_by: userId,
+      performed_by_role: role,
+      note: note.trim(),
+    })
+
+    // If appeal is now decided → update the complaint
+    if (finalDecision) {
+      const voteBreakdown = newCouncilVote === newSupervisorVote
+        ? 'Unanimous decision'
+        : 'Split vote — VOX-O6 decision prevails'
+
+      if (finalDecision === 'upheld') {
+        await supabase.from('complaints')
+          .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+          .eq('id', appeal.complaint_id)
+
+        await supabase.from('complaint_timeline').insert({
+          complaint_id: appeal.complaint_id,
+          action: `📋 Appeal UPHELD — complaint reopened (${voteBreakdown})`,
+          performed_by: null,
+          performed_by_role: 'system',
+          note: `Council voted: ${newCouncilVote ?? 'pending'} | VOX-O6 voted: ${newSupervisorVote ?? 'pending'}`,
+        })
+      } else {
+        await supabase.from('complaints')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', appeal.complaint_id)
+
+        await supabase.from('complaint_timeline').insert({
+          complaint_id: appeal.complaint_id,
+          action: `📋 Appeal REJECTED — resolution stands (${voteBreakdown})`,
+          performed_by: null,
+          performed_by_role: 'system',
+          note: `Council voted: ${newCouncilVote ?? 'pending'} | VOX-O6 voted: ${newSupervisorVote ?? 'pending'}`,
+        })
+      }
     }
 
-    res.json(appeal)
+    res.json(updated)
   } catch (err) {
-    res.status(500).json({ error: 'Failed to review appeal' })
+    console.error('Vote error:', err)
+    res.status(500).json({ error: 'Failed to cast vote' })
   }
 })
 

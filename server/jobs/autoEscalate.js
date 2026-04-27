@@ -48,6 +48,20 @@ export function startAutoEscalateCron() {
 
       for (const complaint of staleComplaints) {
         try {
+          // ── Idempotency guard: skip if already auto-escalated in the last 2 hours ──
+          const { data: recentEntry } = await supabase
+            .from('complaint_timeline')
+            .select('id')
+            .eq('complaint_id', complaint.id)
+            .eq('performed_by_role', 'system')
+            .gte('created_at', new Date(Date.now() - 2 * 3600 * 1000).toISOString())
+            .limit(1)
+
+          if (recentEntry && recentEntry.length > 0) {
+            console.log(`[AutoEscalate] Skipping ${complaint.id} — already escalated in last 2h (duplicate guard)`)
+            continue
+          }
+
           // Escalate to coordinator
           const { data: updated, error: updateErr } = await supabase
             .from('complaints')

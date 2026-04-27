@@ -6,6 +6,7 @@ import ComplaintCard from '../components/ComplaintCard'
 import Footer from '../components/Footer'
 import { SkeletonList } from '../components/SkeletonCard'
 import api from '../utils/api'
+import toast from 'react-hot-toast'
 
 const STATUS_FILTERS = [
   { key: '', label: 'All' },
@@ -154,6 +155,145 @@ function CouncilAnalytics({ complaints, user }) {
   )
 }
 
+// ── Council Appeals View ────────────────────────────────────────────────────
+function CouncilAppealsView({ onVoteCast }) {
+  const [appeals, setAppeals]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [voting, setVoting]       = useState(null)
+  const [vote, setVote]           = useState('')
+  const [note, setNote]           = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    api.get('/api/complaints/appeals/my')
+      .then(r => setAppeals(r.data))
+      .catch(() => toast.error('Failed to load appeals'))
+      .finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [])
+
+  const submitVote = async (appealId) => {
+    if (!vote) return toast.error('Select Uphold or Reject')
+    if (!note.trim()) return toast.error('Please add a note with your vote')
+    setSubmitting(true)
+    try {
+      await api.patch(`/api/complaints/appeals/${appealId}/vote`, { vote, note })
+      toast.success(vote === 'uphold' ? '✅ You voted to Uphold the appeal' : '❌ You voted to Reject the appeal')
+      setVoting(null); setVote(''); setNote('')
+      load()
+      if (onVoteCast) onVoteCast()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Vote failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) return <div className="glass rounded-2xl p-8 text-center text-gray-400">Loading appeals...</div>
+  if (appeals.length === 0) return (
+    <div className="glass rounded-2xl p-12 text-center">
+      <p className="text-5xl mb-3">📋</p>
+      <h3 className="font-bold text-gray-700 text-lg">No Appeals on Your Cases</h3>
+      <p className="text-gray-500 text-sm mt-1">If a student appeals a complaint assigned to you, it will appear here for your vote.</p>
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: '#EDE9FE', border: '1px solid #C4B5FD' }}>
+        <span className="mt-0.5">🗳️</span>
+        <div>
+          <p className="text-purple-800 text-sm font-semibold">Your vote matters.</p>
+          <p className="text-purple-700 text-xs mt-0.5">Appeals require both your vote and a VOX-O6 vote. If you split, VOX-O6 decision prevails as senior authority.</p>
+        </div>
+      </div>
+      {appeals.map(appeal => {
+        const canVote = ['pending','voting'].includes(appeal.status) && appeal.council_vote == null
+        const isDecided = ['upheld','rejected'].includes(appeal.status)
+        return (
+          <div key={appeal.id} className="glass rounded-2xl p-5" style={{ border: canVote ? '2px solid #7C3AED' : '1px solid rgba(0,0,0,0.06)' }}>
+            <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-sm" style={{ color: '#2d5c26' }}>
+                    {appeal.complaint?.complaint_no_display ? `${appeal.complaint.complaint_no_display}-Appeal` : 'VOX-???-Appeal'}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                    style={isDecided
+                      ? (appeal.status === 'upheld' ? { background: '#DCFCE7', color: '#16A34A' } : { background: '#FEE2E2', color: '#DC2626' })
+                      : { background: '#EDE9FE', color: '#7C3AED' }}>
+                    {isDecided ? (appeal.status === 'upheld' ? '✅ Upheld' : '❌ Rejected') : (appeal.council_vote != null ? '🗳️ Your vote cast' : '⏳ Your vote needed')}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Filed by <strong>{appeal.filed_by_user?.name || 'Student'}</strong> · {new Date(appeal.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div className="rounded-xl px-4 py-3 text-sm text-gray-700 mb-3" style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.1)' }}>
+              <p className="font-semibold text-xs text-purple-600 mb-1 uppercase tracking-wide">Student's Appeal Reason</p>
+              <p className="leading-relaxed">{appeal.reason}</p>
+            </div>
+
+            {/* Vote chips */}
+            <div className="flex gap-2 flex-wrap mb-3">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${appeal.council_vote == null ? 'bg-gray-100 text-gray-400' : appeal.council_vote === 'uphold' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                Your vote: {appeal.council_vote == null ? 'Pending' : appeal.council_vote === 'uphold' ? '✅ Uphold' : '❌ Reject'}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${appeal.supervisor_vote == null ? 'bg-gray-100 text-gray-400' : appeal.supervisor_vote === 'uphold' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                VOX-O6: {appeal.supervisor_vote == null ? 'Pending' : appeal.supervisor_vote === 'uphold' ? '✅ Uphold' : '❌ Reject'}
+              </span>
+            </div>
+
+            {/* Vote action */}
+            {canVote && (
+              voting === appeal.id ? (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    {[['uphold','✅ Uphold Appeal','#16A34A','#DCFCE7'],['reject','❌ Reject Appeal','#DC2626','#FEE2E2']].map(([val, lbl, color, bg]) => (
+                      <button key={val} onClick={() => setVote(val)}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all"
+                        style={vote === val ? { background: bg, borderColor: color, color } : { borderColor: '#E5E7EB', color: '#6B7280', background: '#fff' }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
+                    placeholder="Add a note explaining your vote..."
+                    className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none"
+                    style={{ border: '1.5px solid rgba(124,58,237,0.2)', background: 'rgba(255,255,255,0.9)' }} />
+                  <div className="flex gap-2">
+                    <button onClick={() => { setVoting(null); setVote(''); setNote('') }}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200">Cancel</button>
+                    <button onClick={() => submitVote(appeal.id)} disabled={submitting || !vote || !note.trim()}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                      style={{ background: '#7C3AED', border: 'none' }}>
+                      {submitting ? 'Submitting...' : 'Submit Vote'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setVoting(appeal.id)}
+                  className="mt-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white"
+                  style={{ background: '#7C3AED', border: 'none' }}>
+                  🗳️ Cast My Vote
+                </button>
+              )
+            )}
+
+            {appeal.council_vote != null && !isDecided && (
+              <p className="mt-2 text-xs text-gray-400 italic">Your vote is in. Waiting for VOX-O6 to vote...</p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function CouncilDashboard() {
   const { user } = useAuth()
   const { complaints, loading } = useComplaints()
@@ -210,10 +350,14 @@ export default function CouncilDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-5">
-          {[{ key: 'complaints', label: '📋 Complaints' }, { key: 'analytics', label: '📊 My Analytics' }].map(t => (
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+          {[
+            { key: 'complaints', label: '📋 Complaints' },
+            { key: 'appeals',    label: '🗳️ Appeals' },
+            { key: 'analytics',  label: '📊 My Analytics' },
+          ].map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
               style={activeTab === t.key
                 ? { background: '#2d5c26', color: '#c9a84c' }
                 : { background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(45,92,38,0.12)', color: '#2d5c26' }}>
@@ -252,6 +396,10 @@ export default function CouncilDashboard() {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'appeals' && (
+          <CouncilAppealsView />
         )}
 
         {activeTab === 'analytics' && (

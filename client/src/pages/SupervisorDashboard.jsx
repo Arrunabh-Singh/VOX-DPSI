@@ -10,49 +10,161 @@ import api from '../utils/api'
 import toast from 'react-hot-toast'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 
-function SupervisorAppealsView({ appeals, loading }) {
+function AppealStatusBadge({ status }) {
+  const map = {
+    pending: { bg: '#EDE9FE', color: '#7C3AED', label: '⏳ Awaiting Votes' },
+    voting:  { bg: '#FEF3C7', color: '#D97706', label: '🗳️ Voting In Progress' },
+    upheld:  { bg: '#DCFCE7', color: '#16A34A', label: '✅ Upheld' },
+    rejected:{ bg: '#FEE2E2', color: '#DC2626', label: '❌ Rejected' },
+  }
+  const s = map[status] || map.pending
+  return <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: s.bg, color: s.color }}>{s.label}</span>
+}
+
+function VoteChip({ vote, label }) {
+  if (vote == null) return <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#F3F4F6', color: '#9CA3AF' }}>{label}: Pending</span>
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+      style={vote === 'uphold' ? { background: '#DCFCE7', color: '#16A34A' } : { background: '#FEE2E2', color: '#DC2626' }}>
+      {label}: {vote === 'uphold' ? '✅ Uphold' : '❌ Reject'}
+    </span>
+  )
+}
+
+function SupervisorAppealsView({ appeals, loading, activeMember, onVoteCast }) {
+  const [voting, setVoting] = useState(null)   // appeal id being voted on
+  const [vote, setVote]     = useState('')
+  const [note, setNote]     = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const submitVote = async (appealId) => {
+    if (!vote) return toast.error('Select Uphold or Reject')
+    if (!activeMember) return toast.error('Select your VOX-O6 member first')
+    setSubmitting(true)
+    try {
+      await api.patch(`/api/complaints/appeals/${appealId}/vote`, {
+        vote,
+        note,
+        voter_label: `${activeMember.name} (${activeMember.title}-${activeMember.gender})`,
+      })
+      toast.success(vote === 'uphold' ? '✅ You voted to Uphold the appeal' : '❌ You voted to Reject the appeal')
+      setVoting(null); setVote(''); setNote('')
+      if (onVoteCast) onVoteCast()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Vote failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (loading) return <div className="glass rounded-2xl p-8 text-center text-gray-400">Loading appeals...</div>
   if (appeals.length === 0) return (
     <div className="glass rounded-2xl p-12 text-center">
       <p className="text-5xl mb-3">📋</p>
       <h3 className="font-bold text-gray-700 text-lg">No Appeals Yet</h3>
-      <p className="text-gray-500 text-sm mt-1">Student appeals will appear here for monitoring.</p>
+      <p className="text-gray-500 text-sm mt-1">Student appeals will appear here for your vote.</p>
     </div>
   )
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-        <span>👁️</span>
-        <p className="text-blue-700 text-sm font-medium">Supervisor view: Appeals are reviewed by the Principal. You can monitor them here.</p>
+      <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: '#EDE9FE', border: '1px solid #C4B5FD' }}>
+        <span className="mt-0.5">🗳️</span>
+        <p className="text-purple-800 text-sm font-medium"><strong>Dual-Vote System:</strong> Appeals require both the assigned Council Member and a VOX-O6 member to vote. If votes split, VOX-O6 decision prevails.</p>
       </div>
-      {appeals.map(appeal => (
-        <div key={appeal.id} className="glass rounded-2xl p-5" style={{ border: appeal.status === 'pending' ? '2px solid #7C3AED' : '1px solid rgba(0,0,0,0.06)' }}>
-          <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-black text-sm" style={{ color: '#2d5c26' }}>{appeal.complaint?.complaint_no_display ? `${appeal.complaint.complaint_no_display}-Appeal` : 'VOX-???-Appeal'}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                  style={appeal.status === 'pending' ? { background: '#EDE9FE', color: '#7C3AED' } : appeal.status === 'upheld' ? { background: '#DCFCE7', color: '#16A34A' } : { background: '#FEE2E2', color: '#DC2626' }}>
-                  {appeal.status === 'pending' ? '⏳ Pending' : appeal.status === 'upheld' ? '✅ Upheld' : '❌ Rejected'}
-                </span>
+      {appeals.map(appeal => {
+        const canVote = ['pending','voting'].includes(appeal.status) && appeal.supervisor_vote == null
+        const isDecided = ['upheld','rejected'].includes(appeal.status)
+        return (
+          <div key={appeal.id} className="glass rounded-2xl p-5" style={{ border: canVote ? '2px solid #7C3AED' : '1px solid rgba(0,0,0,0.06)' }}>
+            <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-sm" style={{ color: '#2d5c26' }}>{appeal.complaint?.complaint_no_display ? `${appeal.complaint.complaint_no_display}-Appeal` : 'VOX-???-Appeal'}</span>
+                  <AppealStatusBadge status={appeal.status} />
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Filed by <strong>{appeal.filed_by_user?.name || 'Student'}</strong> · {new Date(appeal.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Filed by <strong>{appeal.student?.name || 'Student'}</strong> · {new Date(appeal.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
             </div>
-          </div>
-          <div className="rounded-xl px-4 py-3 text-sm text-gray-700" style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.1)' }}>
-            <p className="font-semibold text-xs text-purple-600 mb-1 uppercase tracking-wide">Appeal Reason</p>
-            <p className="leading-relaxed">{appeal.reason}</p>
-          </div>
-          {appeal.status !== 'pending' && appeal.review_note && (
-            <div className="rounded-xl px-4 py-3 mt-3 text-sm text-gray-700" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
-              <p className="font-semibold text-xs text-gray-500 mb-1 uppercase tracking-wide">Review Note</p>
-              <p>{appeal.review_note}</p>
+
+            {/* Reason */}
+            <div className="rounded-xl px-4 py-3 text-sm text-gray-700 mb-3" style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.1)' }}>
+              <p className="font-semibold text-xs text-purple-600 mb-1 uppercase tracking-wide">Appeal Reason</p>
+              <p className="leading-relaxed">{appeal.reason}</p>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Vote status chips */}
+            <div className="flex gap-2 flex-wrap mb-3">
+              <VoteChip vote={appeal.council_vote}    label="Council" />
+              <VoteChip vote={appeal.supervisor_vote} label="VOX-O6" />
+              {isDecided && appeal.supervisor_voter_label && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#F3F4F6', color: '#6B7280' }}>
+                  Voted by: {appeal.supervisor_voter_label}
+                </span>
+              )}
+            </div>
+
+            {/* Notes when decided */}
+            {isDecided && (
+              <div className="space-y-2 mb-3">
+                {appeal.council_vote_note && (
+                  <div className="rounded-lg px-3 py-2 text-xs text-gray-600" style={{ background: 'rgba(0,0,0,0.03)' }}>
+                    <span className="font-semibold text-gray-400 uppercase">Council note: </span>{appeal.council_vote_note}
+                  </div>
+                )}
+                {appeal.supervisor_vote_note && (
+                  <div className="rounded-lg px-3 py-2 text-xs text-gray-600" style={{ background: 'rgba(0,0,0,0.03)' }}>
+                    <span className="font-semibold text-gray-400 uppercase">VOX-O6 note: </span>{appeal.supervisor_vote_note}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Vote action */}
+            {canVote && (
+              voting === appeal.id ? (
+                <div className="space-y-3 mt-3">
+                  <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Cast Your Vote as {activeMember ? `${activeMember.name} (${activeMember.title}-${activeMember.gender})` : 'VOX-O6'}</p>
+                  <div className="flex gap-2">
+                    {[['uphold','✅ Uphold Appeal','#16A34A','#DCFCE7'],['reject','❌ Reject Appeal','#DC2626','#FEE2E2']].map(([val, lbl, color, bg]) => (
+                      <button key={val} onClick={() => setVote(val)}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all"
+                        style={vote === val ? { background: bg, borderColor: color, color } : { borderColor: '#E5E7EB', color: '#6B7280', background: '#fff' }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
+                    placeholder="Add a note explaining your vote (required)..."
+                    className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none"
+                    style={{ border: '1.5px solid rgba(124,58,237,0.2)', background: 'rgba(255,255,255,0.9)' }} />
+                  <div className="flex gap-2">
+                    <button onClick={() => { setVoting(null); setVote(''); setNote('') }}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200">Cancel</button>
+                    <button onClick={() => submitVote(appeal.id)} disabled={submitting || !vote || !note.trim()}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                      style={{ background: '#7C3AED', border: 'none' }}>
+                      {submitting ? 'Submitting...' : 'Submit Vote'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => { if (!activeMember) { toast.error('Select your VOX-O6 member first'); return; } setVoting(appeal.id) }}
+                  className="mt-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white"
+                  style={{ background: '#7C3AED', border: 'none' }}>
+                  🗳️ Cast My Vote
+                </button>
+              )
+            )}
+
+            {appeal.supervisor_vote != null && !isDecided && (
+              <div className="mt-2 text-xs text-gray-500 italic">Waiting for council member to vote...</div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -175,12 +287,12 @@ function DeletionRequestsView({ deletions, loading, onReviewed }) {
 
 // VOX-O6: 6 members share one supervisor login. Member is selected per-session.
 const VOX_O6_MEMBERS = [
-  { id: 'arrunabh', name: 'Arrunabh Singh',  title: 'School President' },
-  { id: 'ishaan',   name: 'Ishaan Mehta',    title: 'Head Boy' },
-  { id: 'kavya',    name: 'Kavya Reddy',     title: 'Head Girl' },
-  { id: 'rohan',    name: 'Rohan Gupta',     title: 'Secretary — Boys Council' },
-  { id: 'ananya',   name: 'Ananya Joshi',    title: 'Secretary — Girls Council' },
-  { id: 'dhruv',    name: 'Dhruv Patel',     title: 'Joint Secretary' },
+  { id: 'arrunabh', name: 'Arrunabh Singh',  title: 'School President',          gender: 'M' },
+  { id: 'ishaan',   name: 'Ishaan Mehta',    title: 'Head Boy',                  gender: 'M' },
+  { id: 'kavya',    name: 'Kavya Reddy',     title: 'Head Girl',                 gender: 'F' },
+  { id: 'rohan',    name: 'Rohan Gupta',     title: 'Secretary — Boys Council',  gender: 'M' },
+  { id: 'ananya',   name: 'Ananya Joshi',    title: 'Secretary — Girls Council', gender: 'F' },
+  { id: 'dhruv',    name: 'Dhruv Patel',     title: 'Joint Secretary',           gender: 'M' },
 ]
 
 function MemberSelector({ activeMember, onSelect }) {
@@ -192,7 +304,7 @@ function MemberSelector({ activeMember, onSelect }) {
       </div>
       <div className="flex-1">
         <p className="font-bold text-sm" style={{ color: '#2d5c26' }}>{activeMember.name}</p>
-        <p className="text-xs text-gray-500">{activeMember.title} · VOX-O6</p>
+        <p className="text-xs text-gray-500">{activeMember.title}-{activeMember.gender} · VOX-O6</p>
       </div>
       <button onClick={() => setOpen(true)} className="text-xs font-semibold px-3 py-1.5 rounded-lg border" style={{ borderColor: 'rgba(45,92,38,0.2)', color: '#2d5c26' }}>Switch</button>
     </div>
@@ -209,7 +321,7 @@ function MemberSelector({ activeMember, onSelect }) {
               ? { borderColor: '#c9a84c', background: '#FEF9EC' }
               : { borderColor: '#E5E7EB', background: 'transparent' }}>
             <p className="font-bold text-sm text-gray-800">{m.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{m.title}</p>
+            <p className="text-xs font-semibold mt-0.5" style={{ color: '#7C3AED' }}>{m.title}-{m.gender}</p>
           </button>
         ))}
       </div>
@@ -375,7 +487,7 @@ export default function SupervisorDashboard() {
         <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
           {[
             ['complaints', '📋 Complaints'],
-            ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`],
+            ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>['pending','voting'].includes(a.status) && a.supervisor_vote == null).length})` : ''}`],
             ['deletions', `🗑️ Deletions${deletions.filter(d=>d.status==='pending').length > 0 ? ` (${deletions.filter(d=>d.status==='pending').length})` : ''}`],
             ['analytics', '📊 Analytics'],
           ].map(([tab, label]) => (
@@ -432,7 +544,18 @@ export default function SupervisorDashboard() {
         )}
 
         {activeTab === 'appeals' && (
-          <SupervisorAppealsView appeals={appeals} loading={appealsLoading} />
+          <SupervisorAppealsView
+            appeals={appeals}
+            loading={appealsLoading}
+            activeMember={activeMember}
+            onVoteCast={() => {
+              setAppealsLoading(true)
+              api.get('/api/complaints/appeals/all')
+                .then(r => setAppeals(r.data))
+                .catch(() => toast.error('Failed to reload appeals'))
+                .finally(() => setAppealsLoading(false))
+            }}
+          />
         )}
 
         {activeTab === 'deletions' && (
