@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import api from './utils/api'
 
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/complaints/:id" element={<RequireAuth><ComplaintDetail /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
     </AuthProvider>
   )
