@@ -69,7 +69,7 @@ export default function App() {
               fontFamily: 'Outfit, system-ui, sans-serif',
               fontSize: '14px',
               background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(16px)',
+              
               border: '1px solid rgba(27,77,43,0.1)',
               boxShadow: '0 8px 32px rgba(27,77,43,0.12)',
             },

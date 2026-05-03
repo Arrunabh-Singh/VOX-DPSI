@@ -116,7 +116,7 @@ export default function NotificationBell() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '2px solid #2d5c26',
             padding: '0 3px',
-            animation: 'notif-pulse 2s ease-in-out infinite',
+            animation: 'none',
           }}>
             {unread > 9 ? '9+' : unread}
           </span>

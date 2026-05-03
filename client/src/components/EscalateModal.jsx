@@ -49,7 +49,7 @@ export default function EscalateModal({ complaint, userRole, onClose, onSuccess 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: 'rgba(10,25,15,0.65)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      style={{ background: 'rgba(10,25,15,0.72)' }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div className="glass-modal w-full sm:max-w-md overflow-hidden sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto">

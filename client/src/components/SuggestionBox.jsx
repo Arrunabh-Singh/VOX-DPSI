@@ -107,7 +107,7 @@ export default function SuggestionBox() {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-          style={{ background: 'rgba(10,25,15,0.65)', backdropFilter: 'blur(8px)' }}
+          style={{ background: 'rgba(10,25,15,0.72)' }}
           onClick={e => e.target === e.currentTarget && setOpen(false)}
         >
           <form
