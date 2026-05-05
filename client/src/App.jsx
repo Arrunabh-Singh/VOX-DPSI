@@ -27,6 +27,7 @@ function SessionGuard() {
 
 import Login from './pages/Login'
 import StudentDashboard from './pages/StudentDashboard'
+import GuardianDashboard from './pages/GuardianDashboard'
 import RaiseComplaint from './pages/RaiseComplaint'
 import ComplaintDetail from './pages/ComplaintDetail'
 import CouncilDashboard from './pages/CouncilDashboard'
@@ -42,6 +43,7 @@ import VpcVerify from './pages/VpcVerify'
 
 const ROLE_DASHBOARDS = {
   student:        StudentDashboard,
+  guardian:       GuardianDashboard,
   council_member: CouncilDashboard,
   class_teacher:  TeacherDashboard,
   coordinator:    CoordinatorDashboard,

@@ -15,6 +15,7 @@ import supabase from '../db/supabase.js'
 import { formatComplaintNo } from '../utils/complaintNo.js'
 import { notifyAutoEscalation } from '../services/whatsapp.js'
 import { notifyAutoEscalationEvent, notifyStatusChange, notifySlaApproaching, notifyFollowupReminder } from '../services/notifications.js'
+import { sendDailyDigestEmail } from '../services/email.js'
 
 const AUTO_ESCALATE_AFTER_HOURS = 72
 
@@ -431,6 +432,78 @@ export async function checkTermExpiryAlerts() {
   }
 
   console.log(`[TermExpiry] Sent alerts for ${expiring.length} expiring council member(s).`)
+}
+
+// ── Daily Digest (#28) ────────────────────────────────────────────────────────
+// Runs daily at 02:00 UTC (07:30 IST). For each active handler (council_member,
+// class_teacher, coordinator, principal, vice_principal) who has ≥1 open complaint,
+// sends a morning digest email showing SLA status of all their pending items.
+
+const HANDLER_ROLES = ['council_member', 'class_teacher', 'coordinator', 'principal', 'vice_principal']
+const OPEN_STATUSES = ['raised', 'verified', 'in_progress',
+  'escalated_to_teacher', 'escalated_to_coordinator', 'escalated_to_principal']
+
+export function startDailyDigestCron() {
+  // "0 2 * * *" = 02:00 UTC = 07:30 IST
+  cron.schedule('0 2 * * *', async () => {
+    console.log('[DailyDigest] Running morning digest...')
+    try {
+      // Fetch all active handlers
+      const { data: handlers, error: handlerErr } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('role', HANDLER_ROLES)
+        .not('email', 'is', null)
+
+      if (handlerErr) { console.error('[DailyDigest] Handler query error:', handlerErr.message); return }
+      if (!handlers || handlers.length === 0) { console.log('[DailyDigest] No handlers found.'); return }
+
+      let sentCount = 0
+      for (const handler of handlers) {
+        try {
+          // Fetch open complaints currently assigned to / visible to this handler role
+          let query = supabase
+            .from('complaints')
+            .select('id, complaint_no, domain, status, sla_deadline, updated_at, current_handler_role')
+            .in('status', OPEN_STATUSES)
+
+          // Scope by role
+          if (handler.role === 'council_member') {
+            query = query.eq('assigned_council_member_id', handler.id)
+          } else if (handler.role === 'class_teacher') {
+            query = query.eq('current_handler_role', 'class_teacher')
+          } else if (handler.role === 'coordinator') {
+            query = query.eq('current_handler_role', 'coordinator')
+          } else if (handler.role === 'principal' || handler.role === 'vice_principal') {
+            // principals see everything escalated to their level + all open
+            query = query.in('current_handler_role', ['principal', 'vice_principal', 'coordinator'])
+          }
+
+          const { data: complaints, error: cErr } = await query.order('sla_deadline', { ascending: true }).limit(50)
+
+          if (cErr) { console.error(`[DailyDigest] Complaint query error for ${handler.email}:`, cErr.message); continue }
+          if (!complaints || complaints.length === 0) continue
+
+          // Enrich with formatted complaint_no
+          const enriched = complaints.map(c => ({
+            ...c,
+            complaint_no: formatComplaintNo(c.complaint_no),
+          }))
+
+          await sendDailyDigestEmail(handler.email, handler.name, handler.role, enriched)
+          sentCount++
+          console.log(`[DailyDigest] Digest sent → ${handler.email} (${enriched.length} complaint${enriched.length !== 1 ? 's' : ''})`)
+        } catch (innerErr) {
+          console.error(`[DailyDigest] Error for handler ${handler.email}:`, innerErr.message)
+        }
+      }
+
+      console.log(`[DailyDigest] Morning digest complete. Sent ${sentCount} email(s).`)
+    } catch (err) {
+      console.error('[DailyDigest] Cron job failed:', err.message)
+    }
+  })
+  console.log('✅ Daily digest cron started (daily at 07:30 IST)')
 }
 
 export function startTermExpiryCron() {

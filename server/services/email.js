@@ -213,3 +213,169 @@ export async function sendStatusChangeEmail(studentEmail, studentName, complaint
     console.log(`[Email:Status] Subject: ${parsed.subject}`)
   }
 }
+
+// ── Daily Digest Email (#28) ──────────────────────────────────────────────────
+// Sent to each handler at 07:30 IST every morning with their pending complaints.
+
+const DOMAIN_EMOJI = {
+  academics:      '📚',
+  infrastructure: '🏗️',
+  safety:         '🛡️',
+  personal:       '👤',
+  behaviour:      '⚠️',
+  posh_pocso:     '🔴',
+  other:          '📋',
+}
+
+const STATUS_SHORT = {
+  raised:                   'Raised',
+  verified:                 'Verified',
+  in_progress:              'In Progress',
+  escalated_to_teacher:     '↑ Teacher',
+  escalated_to_coordinator: '↑ Coordinator',
+  escalated_to_principal:   '↑ Principal',
+  reopened:                 'Reopened',
+}
+
+/**
+ * Send a morning digest email to one handler.
+ * @param {string} toEmail
+ * @param {string} toName
+ * @param {string} role
+ * @param {Array}  complaints  — array of complaint rows (with complaint_no_display, domain, status, updated_at, sla_deadline)
+ */
+export async function sendDailyDigestEmail(toEmail, toName, role, complaints) {
+  if (!complaints.length) return
+
+  const clientBase  = process.env.CLIENT_URL || 'http://localhost:5173'
+  const dateStr     = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const now         = Date.now()
+
+  // Separate SLA-breached and approaching
+  const breached    = complaints.filter(c => c.sla_deadline && new Date(c.sla_deadline) < new Date())
+  const approaching = complaints.filter(c => c.sla_deadline && new Date(c.sla_deadline) >= new Date() && new Date(c.sla_deadline) - now < 6 * 3600000)
+  const normal      = complaints.filter(c => !breached.includes(c) && !approaching.includes(c))
+
+  const roleLabel = {
+    council_member: 'Council Member',
+    class_teacher:  'Class Teacher',
+    coordinator:    'Coordinator',
+    principal:      'Principal',
+    vice_principal: 'Vice Principal',
+    supervisor:     'Supervisor',
+  }[role] || role
+
+  // Build complaint rows HTML
+  const rowHtml = (list, borderColor) => list.map(c => {
+    const domainEmoji = DOMAIN_EMOJI[c.domain] || '📋'
+    const statusLabel = STATUS_SHORT[c.status] || c.status
+    const hoursOld    = Math.round((now - new Date(c.updated_at)) / 3600000)
+    const slaText     = c.sla_deadline
+      ? (new Date(c.sla_deadline) < new Date()
+          ? `<span style="color:#DC2626;font-weight:700">SLA BREACHED</span>`
+          : `SLA: ${new Date(c.sla_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`)
+      : ''
+    return `
+      <tr>
+        <td style="padding:10px 12px;border-left:3px solid ${borderColor};font-family:monospace;font-weight:700;color:#1B4D2B;font-size:13px">${c.complaint_no_display || ('VOX-' + String(c.complaint_no).padStart(4, '0'))}</td>
+        <td style="padding:10px 8px;font-size:13px;color:#374151">${domainEmoji} ${c.domain}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#6B7280">${statusLabel}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#6B7280">${hoursOld}h ago</td>
+        <td style="padding:10px 8px;font-size:12px">${slaText}</td>
+      </tr>`
+  }).join('')
+
+  const tableSection = (title, list, borderColor, bgColor) => list.length === 0 ? '' : `
+    <p style="font-size:13px;font-weight:700;color:#374151;margin:20px 0 6px">${title} (${list.length})</p>
+    <table style="width:100%;border-collapse:collapse;background:${bgColor};border-radius:8px;overflow:hidden;font-size:13px">
+      <thead>
+        <tr style="background:rgba(0,0,0,0.04)">
+          <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6B7280;font-weight:600">NO.</th>
+          <th style="padding:8px 8px;text-align:left;font-size:11px;color:#6B7280;font-weight:600">DOMAIN</th>
+          <th style="padding:8px 8px;text-align:left;font-size:11px;color:#6B7280;font-weight:600">STATUS</th>
+          <th style="padding:8px 8px;text-align:left;font-size:11px;color:#6B7280;font-weight:600">LAST UPDATE</th>
+          <th style="padding:8px 8px;text-align:left;font-size:11px;color:#6B7280;font-weight:600">SLA</th>
+        </tr>
+      </thead>
+      <tbody>${rowHtml(list, borderColor)}</tbody>
+    </table>`
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Inter,Arial,sans-serif;background:#f5f7fa;margin:0;padding:24px">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+
+  <!-- Header -->
+  <div style="background:#1B4D2B;padding:24px 32px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <p style="color:#C9920A;font-size:20px;font-weight:900;margin:0;letter-spacing:1px">VOX DPSI</p>
+        <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:3px 0 0">Delhi Public School Indore</p>
+      </div>
+      <div style="text-align:right">
+        <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;margin:0">Morning Digest</p>
+        <p style="color:rgba(255,255,255,0.55);font-size:11px;margin:2px 0 0">${dateStr}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div style="padding:28px 32px">
+    <p style="color:#1A1A1A;font-size:15px;font-weight:700;margin:0 0 4px">Good morning, ${toName} 👋</p>
+    <p style="color:#6B7280;font-size:13px;margin:0 0 20px">
+      Here's your daily summary as <strong>${roleLabel}</strong>. You have <strong>${complaints.length} open complaint${complaints.length !== 1 ? 's' : ''}</strong> awaiting attention.
+    </p>
+
+    <!-- Summary pills -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+      <div style="background:#FEE2E2;border-radius:8px;padding:10px 16px;text-align:center;min-width:80px">
+        <p style="font-size:22px;font-weight:900;color:#DC2626;margin:0">${breached.length}</p>
+        <p style="font-size:11px;color:#DC2626;font-weight:600;margin:2px 0 0">SLA Breached</p>
+      </div>
+      <div style="background:#FEF3C7;border-radius:8px;padding:10px 16px;text-align:center;min-width:80px">
+        <p style="font-size:22px;font-weight:900;color:#D97706;margin:0">${approaching.length}</p>
+        <p style="font-size:11px;color:#D97706;font-weight:600;margin:2px 0 0">Due Soon</p>
+      </div>
+      <div style="background:#F0FDF4;border-radius:8px;padding:10px 16px;text-align:center;min-width:80px">
+        <p style="font-size:22px;font-weight:900;color:#16A34A;margin:0">${normal.length}</p>
+        <p style="font-size:11px;color:#16A34A;font-weight:600;margin:2px 0 0">On Track</p>
+      </div>
+    </div>
+
+    ${tableSection('🔴 SLA Breached — Action Required', breached, '#DC2626', '#FFF5F5')}
+    ${tableSection('🟡 SLA Approaching (within 6h)', approaching, '#D97706', '#FFFBEB')}
+    ${tableSection('🟢 Active Complaints', normal, '#16A34A', '#F0FDF4')}
+
+    <!-- CTA -->
+    <div style="text-align:center;margin:28px 0 0">
+      <a href="${clientBase}" style="display:inline-block;background:#1B4D2B;color:#C9920A;font-weight:700;font-size:14px;padding:13px 32px;border-radius:8px;text-decoration:none">
+        Open Vox DPSI Dashboard →
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#F5F7FA;padding:14px 32px;text-align:center;border-top:1px solid #E5E7EB">
+    <p style="color:#9CA3AF;font-size:11px;margin:0">
+      Delhi Public School Indore · Vox DPSI · You receive this because you are an active handler.<br>
+      This digest is sent every morning at 07:30 IST.
+    </p>
+  </div>
+</div>
+</body>
+</html>`
+
+  const info = await transporter.sendMail({
+    from:    FROM_ADDR,
+    to:      toEmail,
+    subject: `[Vox DPSI] Morning Digest — ${complaints.length} open complaint${complaints.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+    html,
+    text: `Good morning ${toName},\n\nYour Vox DPSI morning digest (${dateStr}):\n\nSLA Breached: ${breached.length}\nDue Soon: ${approaching.length}\nOn Track: ${normal.length}\nTotal Open: ${complaints.length}\n\nOpen your dashboard: ${clientBase}\n`,
+  })
+
+  if (process.env.NODE_ENV !== 'production' && info.message) {
+    console.log(`[Email:Digest] Would send to: ${toEmail} — ${complaints.length} complaints`)
+  }
+}

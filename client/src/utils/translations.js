@@ -74,8 +74,16 @@ export const translations = {
     'status.archived':                  'Archived',
 
     // ── Navigation ───────────────────────────────────────────────────────────
-    'nav.quickExit':            'Quick Exit',
-    'nav.notifications':        'Notifications',
+    'role.student':             'Student',
+    'role.guardian':            'Parent/Guardian',
+    'role.council_member':      'Council Member',
+    'role.class_teacher':       'Class Teacher',
+    'role.coordinator':         'Coordinator',
+    'role.principal':           'Principal',
+    'role.vice_principal':      'Vice Principal',
+    'role.supervisor':          'VOX-O6 Overseer',
+    'role.director':            'Director',
+    'role.board_member':        'Board Member',
 
     // ── Student Dashboard ────────────────────────────────────────────────────
     'student.dashboard.title':       'My Complaints',
@@ -85,6 +93,13 @@ export const translations = {
     'student.dashboard.empty':       'You haven\'t raised any complaints yet.',
     'student.dashboard.emptyHint':   'Tap "Raise a Complaint" to get started.',
     'student.dashboard.statusLegend':'Status Guide',
+
+    // ── Guardian Dashboard ───────────────────────────────────────────────────
+    'guardian.dashboard.title':      'Ward\'s Complaints',
+    'guardian.dashboard.welcome':    'Welcome, {name}',
+    'guardian.dashboard.empty':      'No complaints found for your ward.',
+    'guardian.dashboard.emptyHint':  'Any complaints raised by your child will appear here.',
+
 
     // ── Raise Complaint ──────────────────────────────────────────────────────
     'raise.title':              'Raise a Complaint',
@@ -233,8 +248,16 @@ export const translations = {
     'status.archived':                  'संग्रहीत',
 
     // ── Navigation ───────────────────────────────────────────────────────────
-    'nav.quickExit':            'जल्दी बाहर',
-    'nav.notifications':        'सूचनाएँ',
+    'role.student':             'छात्र',
+    'role.guardian':            'अभिभावक/संरक्षक',
+    'role.council_member':      'परिषद सदस्य',
+    'role.class_teacher':       'कक्षा शिक्षक',
+    'role.coordinator':         'समन्वयक',
+    'role.principal':           'प्राचार्य',
+    'role.vice_principal':      'उप प्राचार्य',
+    'role.supervisor':          'VOX-O6 निरीक्षक',
+    'role.director':            'निदेशक',
+    'role.board_member':        'बोर्ड सदस्य',
 
     // ── Student Dashboard ────────────────────────────────────────────────────
     'student.dashboard.title':       'मेरी शिकायतें',
@@ -244,6 +267,13 @@ export const translations = {
     'student.dashboard.empty':       'आपने अभी तक कोई शिकायत दर्ज नहीं की है।',
     'student.dashboard.emptyHint':   '"शिकायत दर्ज करें" दबाएँ।',
     'student.dashboard.statusLegend':'स्थिति मार्गदर्शिका',
+
+    // ── Guardian Dashboard ───────────────────────────────────────────────────
+    'guardian.dashboard.title':      'वार्ड की शिकायतें',
+    'guardian.dashboard.welcome':    'नमस्ते, {name}',
+    'guardian.dashboard.empty':      'आपके वार्ड के लिए कोई शिकायत नहीं मिली।',
+    'guardian.dashboard.emptyHint':  'आपके बच्चे द्वारा दर्ज की गई कोई भी शिकायत यहाँ दिखाई देगी।',
+
 
     // ── Raise Complaint ──────────────────────────────────────────────────────
     'raise.title':              'शिकायत दर्ज करें',
@@ -310,20 +340,14 @@ export const translations = {
     'filter.inProgress':'प्रगति में',
     'filter.toPrincipal':'प्राचार्य को',
     'filter.resolved':  'हल हुई',
-    'filter.domain':    'सभी श्रेणियाँ',
-    'filter.section':   'सभी कक्षाएँ',
-
-    // ── Notifications ────────────────────────────────────────────────────────
-    'notif.empty':      'कोई सूचना नहीं',
-    'notif.markRead':   'सभी पढ़ा हुआ चिह्नित करें',
-
-    // ── Errors / Empty states ────────────────────────────────────────────────
-    'error.notFound':           'शिकायत नहीं मिली',
-    'error.unauthorized':       'आप इसे देखने के लिए अधिकृत नहीं हैं',
-    'error.generic':            'कुछ गलत हो गया। कृपया दोबारा प्रयास करें।',
-    'empty.complaints':         'कोई शिकायत आपके फ़िल्टर से मेल नहीं खाती',
-    'empty.timeline':           'अभी तक कोई गतिविधि दर्ज नहीं',
+    'filter.closed':    'बंद',
   },
 }
 
-export default translations
+export function t(locale, key, replacements = {}) {
+  const str = translations[locale]?.[key] ?? translations['en']?.[key] ?? key
+  return Object.entries(replacements).reduce(
+    (s, [k, v]) => s.replace(new RegExp(`\\{${k}\\}`, 'g'), v),
+    str
+  )
+}

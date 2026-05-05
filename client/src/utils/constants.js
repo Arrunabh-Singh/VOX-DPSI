@@ -21,6 +21,7 @@ export const STATUSES = {
 
 export const ROLES = {
   student:         'Student',
+  guardian:        'Parent/Guardian',
   council_member:  'Council Member',
   class_teacher:   'Class Teacher',
   coordinator:     'Coordinator',
@@ -34,6 +35,7 @@ export const ROLES = {
 // Role hierarchy — higher number = more authority
 export const ROLE_LEVEL = {
   student:         0,
+  guardian:        0,
   council_member:  1,
   class_teacher:   2,
   coordinator:     3,
@@ -67,5 +69,4 @@ export const COLORS = {
   success:       '#16A34A',
   warning:       '#D97706',
   danger:        '#DC2626',
-  border:        'rgba(45,92,38,0.12)',
 }

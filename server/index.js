@@ -17,7 +17,7 @@ import auditLogRoutes from './routes/auditLog.js'
 import workflowTemplateRoutes from './routes/workflowTemplates.js'
 import resolutionTemplateRoutes from './routes/resolutionTemplates.js'
 import delegationRoutes from './routes/delegations.js'
-import { startAutoEscalateCron, startRetentionCron, startTermExpiryCron } from './jobs/autoEscalate.js'
+import { startAutoEscalateCron, startRetentionCron, startTermExpiryCron, startDailyDigestCron } from './jobs/autoEscalate.js'
 
 dotenv.config()
 
@@ -149,6 +149,7 @@ app.listen(PORT, () => {
   startAutoEscalateCron()
   startRetentionCron()          // daily 02:30 IST (#32)
   startTermExpiryCron()         // daily 08:00 IST (#24)
+  startDailyDigestCron()        // daily 07:30 IST (#28)
 })
 
 export default app
