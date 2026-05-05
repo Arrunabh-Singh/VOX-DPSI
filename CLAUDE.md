@@ -1,401 +1,876 @@
-# CLAUDE.md — Vox DPSI Complete Handover Guide
+# CLAUDE.md — Vox DPSI Complete Handover Guide (v3 — May 2026)
 
-> **Who wrote this:** Claude (Anthropic), built inside Cowork mode on the Claude desktop app,
-> commissioned by Arrunabh Singh (arrunabh.s@gmail.com) for his DPS Indore Student Council
-> Presidential interview. If you are a future developer — human or AI — read this top to bottom
-> before touching anything.
+> **This document is the single source of truth for any AI or developer continuing this project.**
+> Read it top-to-bottom before touching any code. It supersedes all older versions.
+>
+> Built by Claude (Anthropic) inside Cowork mode, commissioned by Arrunabh Singh
+> (arrunabh.s@gmail.com) — School President candidate, DPS Indore.
 
 ---
 
 ## 1. What This Project Is
 
-**Vox DPSI** is a live, production-grade web application — a student grievance management system
-for Delhi Public School Indore. Think "Indore 311, but for school students."
+**Vox DPSI** is a production-grade student grievance management system for Delhi Public School Indore.
+Students raise complaints → council members handle them → complex cases escalate through
+Class Teacher → Coordinator → Principal. Every action is permanently logged.
 
-- Students raise complaints by category (Academics, Infrastructure, Safety, Personal, Behaviour, Other)
-- Council members handle and verify complaints in person
-- Complex issues escalate up through Class Teacher → Coordinator → Principal
-- Every action is logged with a permanent audit trail
-- A built-in anonymity system lets students protect their identity when escalating to teachers
-
-**Live URL:** https://vox-dpsi.vercel.app  
-**GitHub:** https://github.com/Arrunabh-Singh/VOX-DPSI  
-**Demo password (all accounts):** `demo123`
+- **Live URL:** https://vox-dpsi.vercel.app
+- **Backend:** https://vox-dpsi-production-6d95.up.railway.app
+- **GitHub:** https://github.com/Arrunabh-Singh/VOX-DPSI
+- **Supabase project:** gznhziptmydkalsrazpj
+- **Demo password (all accounts):** `demo123`
 
 ---
 
-## 2. Project History — How It Was Built
+## 2. Tech Stack
 
-This entire project was designed, coded, and deployed by Claude inside a single Cowork session
-(April 18–19, 2026). The build happened in phases:
+| Layer | Technology | Host |
+|-------|-----------|------|
+| Frontend | React 18 + Vite 5 + Tailwind CSS 3 | Vercel |
+| Backend | Node.js + Express (ES modules, `"type":"module"`) | Railway |
+| Database | Supabase (PostgreSQL) | Supabase |
+| Auth | JWT via HttpOnly cookie (cookie-parser) | self |
+| File Storage | Supabase Storage (private bucket + signed URLs) | Supabase |
+| Email | Nodemailer (SMTP config in server/.env) | any SMTP |
+| WhatsApp | Twilio sandbox (not yet live — task #27 pending) | Twilio |
+| Cron | node-cron (runs inside Railway process) | Railway |
 
-| Phase | What happened |
-|-------|--------------|
-| v1 Build | Claude wrote all 50+ files from scratch based on Arrunabh's spec |
-| Credentials | Real Supabase project created, GitHub repo created, env vars set |
-| Database | Schema + seed SQL run in Supabase SQL editor |
-| Deployment | GitHub push via DEPLOY_NOW.bat; Vercel CLI deployed frontend |
-| Railway | Backend deployed manually from railway.app → GitHub repo |
-| Design Refresh | Claude Design tool (claude.ai/design) used to redesign UI: navy→green, frosted glass |
-| Presentation | Standalone 11-slide HTML presentation built in Claude Design |
-
-**Key decisions made during build:**
-- Switched from navy `#003366` to DPS Indore's actual brand green `#1B4D2B`
-- Gold changed from `#FFD700` to the richer `#C9920A` (matches school torch)
-- Added frosted glass (`backdrop-filter: blur`) throughout
-- Presentation uses `<deck-stage>` web component for keyboard navigation
+**Brand colours:**
+- Primary green: `#2d5c26` (used in supervisor/council dashboards — DPS green)
+- Gold: `#c9a84c`
+- Navy (original): `#003366` (legacy, being phased out to green)
+- Background: `#F5F7FA`
 
 ---
 
-## 3. Tech Stack
+## 3. Role System (8 roles)
 
-### Frontend (`client/`)
-| Tool | Version | Purpose |
-|------|---------|---------|
-| React | 18 | UI framework |
-| Vite | 5 | Build tool |
-| Tailwind CSS | 3 | Utility-first CSS |
-| React Router | 6 | Client-side routing |
-| Axios | 1.x | HTTP client |
-| react-hot-toast | 2.x | Toast notifications |
-
-### Backend (`server/`)
-| Tool | Purpose |
-|------|---------|
-| Node.js + Express | REST API server |
-| `@supabase/supabase-js` | Database client (service role key) |
-| `jsonwebtoken` | JWT auth tokens |
-| `bcryptjs` | Password hashing |
-| `multer` | File upload handling |
-| `cors` | Cross-origin requests |
-
-### Infrastructure
-| Service | What it hosts |
-|---------|--------------|
-| **Vercel** | React frontend → https://vox-dpsi.vercel.app |
-| **Railway** | Express backend → https://vox-dpsi-server.up.railway.app |
-| **Supabase** | PostgreSQL database + file storage |
-
----
-
-## 4. Environment Variables
-
-### `server/.env` (DO NOT COMMIT — excluded by .gitignore)
-```
-PORT=5000
-SUPABASE_URL=https://gznhziptmydkalsrazpj.supabase.co
-SUPABASE_SERVICE_KEY=<service_role_key>
-JWT_SECRET=voxdpsi2026secretkeyforjwtauth
-CLIENT_URL=https://vox-dpsi.vercel.app
-```
-
-### `client/.env` (DO NOT COMMIT — excluded by .gitignore)
-```
-VITE_API_URL=https://vox-dpsi-server.up.railway.app
-VITE_SUPABASE_URL=https://gznhziptmydkalsrazpj.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon_key>
-```
-
-**Railway** has these server env vars set in its dashboard.  
-**Vercel** has the client env vars set via the CLI deploy command.
-
-> If you need to redeploy, see Section 9 (Deployment).
-
----
-
-## 5. Database Schema
-
-Four tables in Supabase (PostgreSQL):
-
-### `users`
-Stores all accounts. Roles enforced via CHECK constraint.
-```sql
-id          UUID PK
-name        TEXT
-email       TEXT UNIQUE
-password_hash TEXT           -- bcryptjs, cost 12
-role        TEXT             -- see Section 6 for roles
-scholar_no  TEXT             -- students only (e.g. '5001')
-section     TEXT             -- e.g. 'XII B'
-house       TEXT             -- e.g. 'Prithvi'
-created_at  TIMESTAMPTZ
-```
-
-### `complaints`
-The core entity. `complaint_no` is a SERIAL used to generate VOX-XXXX display IDs.
-```sql
-id                   UUID PK
-complaint_no         SERIAL UNIQUE     -- display as VOX-0001, VOX-0002…
-student_id           UUID → users(id)
-domain               TEXT              -- academics|infrastructure|safety|personal|behaviour|other
-description          TEXT
-is_anonymous_requested BOOLEAN DEFAULT false
-identity_revealed    BOOLEAN DEFAULT false  -- set true if council reveals identity
-attachment_url       TEXT              -- Supabase Storage public URL
-status               TEXT DEFAULT 'raised'
-assigned_council_member_id UUID → users(id)
-supervisor_id        UUID → users(id)
-current_handler_role TEXT DEFAULT 'council_member'
-created_at           TIMESTAMPTZ
-updated_at           TIMESTAMPTZ       -- auto-updated by trigger
-```
-
-### `complaint_timeline`
-Immutable audit trail. Every action appends a row — nothing is ever deleted.
-```sql
-id               UUID PK
-complaint_id     UUID → complaints(id)
-action           TEXT           -- e.g. 'Complaint raised', 'Escalated to coordinator'
-performed_by     UUID → users(id)
-performed_by_role TEXT
-note             TEXT           -- optional free-text field note
-created_at       TIMESTAMPTZ
-```
-
-### `escalations`
-Records each escalation event and the identity-reveal decision.
-```sql
-id               UUID PK
-complaint_id     UUID → complaints(id)
-escalated_by     UUID → users(id)
-escalated_to_role TEXT
-student_consent  BOOLEAN DEFAULT false  -- true = council revealed identity
-reason           TEXT
-created_at       TIMESTAMPTZ
-```
-
----
-
-## 6. Role System
-
-Six roles, each with a distinct dashboard and set of permissions:
-
-| Role | Email (demo) | Dashboard | What they see |
-|------|-------------|-----------|---------------|
-| `student` | 5001@student.dpsindore.org | StudentDashboard | Their own complaints only |
-| `council_member` | 5002@student.dpsindore.org | CouncilDashboard | Assigned complaints; always sees real name |
-| `supervisor` | 5411@student.dpsindore.org | SupervisorDashboard | All complaints, read-only monitoring |
-| `class_teacher` | sharma@staff.dpsindore.org | TeacherDashboard | Escalated-to-teacher complaints |
-| `coordinator` | kapil@staff.dpsindore.org | CoordinatorDashboard | All coordinator-level escalations |
-| `principal` | principal@dpsindore.org | PrincipalDashboard | Full system view + CSV export |
+| Role | Demo email | Dashboard | Key permission |
+|------|-----------|-----------|----------------|
+| `student` | student@dpsi.com | StudentDashboard | Own complaints only |
+| `council_member` | council@dpsi.com | CouncilDashboard | Assigned complaints; always sees real name |
+| `supervisor` | supervisor@dpsi.com | SupervisorDashboard | All complaints read-only + notes |
+| `class_teacher` | teacher@dpsi.com | TeacherDashboard | Escalated-to-teacher complaints |
+| `coordinator` | coordinator@dpsi.com | CoordinatorDashboard | All coordinator-level + can escalate to principal |
+| `principal` | principal@dpsi.com | PrincipalDashboard | Full system view + CSV export |
+| `vice_principal` | (none seeded) | VicePrincipalDashboard | Same access level as principal |
+| `board_member` | (none seeded) | SupervisorDashboard | Read-only like supervisor |
 
 All demo accounts use password `demo123`.
 
 ---
 
-## 7. Anonymity System — Critical Logic
+## 4. Database Schema (full, current)
 
-This is the most important feature. Read carefully before modifying anything related to
-escalations or student identity.
+### Core tables (from `schema.sql`)
 
-**How it works:**
+#### `users`
+```sql
+id UUID PK DEFAULT gen_random_uuid()
+name TEXT NOT NULL
+email TEXT UNIQUE NOT NULL
+password_hash TEXT NOT NULL
+role TEXT CHECK (role IN ('student','council_member','class_teacher','coordinator',
+  'principal','supervisor','vice_principal','board_member','external_ic_member'))
+scholar_no TEXT                -- students only
+section TEXT                   -- e.g. 'XII B'
+house TEXT                     -- e.g. 'Prithvi'
+phone TEXT                     -- for SMS/WhatsApp (optional)
+created_at TIMESTAMPTZ DEFAULT now()
+-- Added by migration_term_limits.sql:
+term_start DATE               -- council/supervisor tenure start
+term_end DATE                 -- council/supervisor tenure end
+term_role TEXT                -- e.g. 'House Captain', 'School President'
+-- Added by DPDP compliance:
+is_privacy_acknowledged BOOLEAN DEFAULT false
+privacy_acknowledged_at TIMESTAMPTZ
+-- Added by VPC flow:
+vpc_status TEXT               -- 'pending'|'approved'|'rejected'|null
+vpc_parent_email TEXT
+vpc_consent_token TEXT
+vpc_consent_expires TIMESTAMPTZ
+vpc_approved_at TIMESTAMPTZ
+```
 
-1. Student submits complaint with `is_anonymous_requested: true`
-2. Council member dashboard **always** shows the real student name (they must verify in person)
-3. When the council member clicks "Escalate":
-   - If `is_anonymous_requested` is true → **EscalateModal** shows: *"This student requested anonymity. Reveal their identity to the next handler?"*
-   - Council member picks YES or NO
-   - YES → `identity_revealed = true` stored on the complaint; all future handlers see the name
-   - NO → `identity_revealed = false`; teacher/coordinator/principal see "Anonymous Student"
-4. The escalation decision is permanently logged in `complaint_timeline`
-5. Principal and Supervisor always see full names regardless of `identity_revealed`
+#### `complaints`
+```sql
+id UUID PK
+complaint_no SERIAL UNIQUE       -- formatted as VOX-0001 by complaintNo.js
+student_id UUID → users(id)
+domain TEXT CHECK (domain IN ('academics','infrastructure','safety','personal','behaviour','other','posh_pocso'))
+description TEXT NOT NULL
+is_anonymous_requested BOOLEAN DEFAULT false
+identity_revealed BOOLEAN DEFAULT false
+attachment_url TEXT              -- Supabase Storage signed URL
+status TEXT DEFAULT 'raised' CHECK (status IN (
+  'raised','verified','in_progress','escalated_to_teacher',
+  'escalated_to_coordinator','escalated_to_principal','resolved','closed','reopened'))
+assigned_council_member_id UUID → users(id)
+supervisor_id UUID → users(id)
+current_handler_role TEXT DEFAULT 'council_member'
+sla_deadline TIMESTAMPTZ         -- set on creation (72h default)
+created_at TIMESTAMPTZ
+updated_at TIMESTAMPTZ           -- auto-updated by trigger
+-- POSH/POCSO fields:
+respondent_type TEXT             -- 'student'|'teaching_staff'|'non_teaching_staff'
+ic_case_ref TEXT                 -- if routed to IC
+-- Consensus fields (migration_consensus.sql):
+consensus_required BOOLEAN DEFAULT false
+consensus_status TEXT            -- 'voting'|'approved'|'rejected'|null
+consensus_requested_by UUID → users(id)
+consensus_requested_at TIMESTAMPTZ
+consensus_resolution_note TEXT
+-- Merge fields:
+merged_into UUID → complaints(id)  -- if this complaint was merged
+is_merged BOOLEAN DEFAULT false
+-- Draft fields:
+draft_data JSONB                 -- auto-save draft
+-- Timestamp jitter (task #73):
+display_created_at TIMESTAMPTZ   -- jittered timestamp shown to handlers
+-- Reopen:
+reopen_count INTEGER DEFAULT 0
+last_reopened_at TIMESTAMPTZ
+```
 
-**Where this logic lives:**
-- `server/routes/complaints.js` — PATCH `/escalate` endpoint; checks `reveal_identity` param
-- `client/src/components/EscalateModal.jsx` — the UI modal with YES/NO buttons
-- `client/src/pages/TeacherDashboard.jsx` — conditionally shows name based on `identity_revealed`
-- `client/src/pages/CoordinatorDashboard.jsx` — same check
-- `client/src/pages/PrincipalDashboard.jsx` — always shows name
+#### `complaint_timeline`
+Immutable audit trail. Never delete rows.
+```sql
+id UUID PK
+complaint_id UUID → complaints(id)
+action TEXT NOT NULL
+performed_by UUID → users(id)
+performed_by_role TEXT
+note TEXT
+created_at TIMESTAMPTZ DEFAULT now()
+```
+
+#### `escalations`
+```sql
+id UUID PK
+complaint_id UUID → complaints(id)
+escalated_by UUID → users(id)
+escalated_to_role TEXT NOT NULL
+student_consent BOOLEAN DEFAULT false
+reason TEXT
+created_at TIMESTAMPTZ DEFAULT now()
+```
+
+### Extension tables (from migrations)
+
+#### `notifications` (task #26)
+```sql
+id UUID PK
+user_id UUID → users(id)
+title TEXT
+body TEXT
+link TEXT                       -- e.g. '/complaints/abc-123'
+is_read BOOLEAN DEFAULT false
+created_at TIMESTAMPTZ
+```
+
+#### `complaint_access_log` (task #64)
+```sql
+id UUID PK
+complaint_id UUID → complaints(id)
+viewer_id UUID → users(id)
+viewer_role TEXT
+accessed_at TIMESTAMPTZ DEFAULT now()
+ip_address TEXT                 -- for audit purposes
+```
+
+#### `audit_log` (task #22)
+```sql
+id UUID PK
+actor_id UUID → users(id)
+actor_role TEXT
+action TEXT                     -- e.g. 'LOGIN', 'COMPLAINT_CREATED', 'STATUS_CHANGED'
+entity_type TEXT                -- 'complaint'|'user'|'escalation' etc.
+entity_id TEXT
+details JSONB
+ip_address TEXT
+created_at TIMESTAMPTZ DEFAULT now()
+```
+
+#### `complaint_votes` (task #21 — from migration_consensus.sql)
+```sql
+id UUID PK
+complaint_id UUID → complaints(id)
+voter_id UUID → users(id)
+vote TEXT CHECK (vote IN ('approve','reject'))
+note TEXT
+created_at TIMESTAMPTZ DEFAULT now()
+UNIQUE (complaint_id, voter_id)  -- one vote per person per complaint
+```
+
+#### `delegation_rules` (task #20 — from migration_delegation.sql)
+```sql
+id UUID PK
+delegator_id UUID → users(id)   -- council member handing off
+delegate_id UUID → users(id)    -- person covering
+start_date DATE NOT NULL
+end_date DATE NOT NULL
+reason TEXT
+created_by UUID → users(id)
+created_at TIMESTAMPTZ DEFAULT now()
+CONSTRAINT no_self_delegation CHECK (delegator_id <> delegate_id)
+CONSTRAINT valid_date_range CHECK (start_date <= end_date)
+```
+
+#### `workflow_templates` (task #8)
+```sql
+id UUID PK
+name TEXT
+domain TEXT                     -- which complaint domain this applies to
+steps JSONB                     -- array of {role, action, deadline_hours}
+created_by UUID → users(id)
+created_at TIMESTAMPTZ
+```
+
+#### `resolution_templates` (task #36)
+```sql
+id UUID PK
+title TEXT
+body TEXT
+domain TEXT
+created_by UUID → users(id)
+created_at TIMESTAMPTZ
+```
+
+#### `suggestions` (task #69 — pre-complaint dialogue)
+```sql
+id UUID PK
+student_id UUID → users(id)     -- null if anonymous
+message TEXT
+is_anonymous BOOLEAN DEFAULT false
+counselor_reply TEXT
+replied_by UUID → users(id)
+status TEXT DEFAULT 'open'      -- 'open'|'replied'|'closed'
+created_at TIMESTAMPTZ
+replied_at TIMESTAMPTZ
+```
+
+#### `erasure_requests` (task #60)
+```sql
+id UUID PK
+user_id UUID → users(id)
+role TEXT
+reason TEXT
+status TEXT DEFAULT 'pending'   -- 'pending'|'approved'|'rejected'
+reviewer_note TEXT
+reviewed_at TIMESTAMPTZ
+created_at TIMESTAMPTZ
+```
+
+#### `complaint_appeals` (task #3 — reopen from closed)
+```sql
+id UUID PK
+complaint_id UUID → complaints(id)
+filed_by UUID → users(id)
+reason TEXT
+status TEXT DEFAULT 'pending'   -- 'pending'|'upheld'|'rejected'
+reviewed_by UUID → users(id)
+reviewer_note TEXT
+reviewed_at TIMESTAMPTZ
+created_at TIMESTAMPTZ
+```
+
+#### **Pending migrations (NOT YET RUN in Supabase):**
+These SQL files exist in the repo root but must be manually run in the Supabase SQL editor:
+- `migration_delegation.sql` — adds `delegation_rules` table
+- `migration_consensus.sql` — adds `complaint_votes` table + consensus columns on `complaints`
+- `migration_term_limits.sql` — adds `term_start`, `term_end`, `term_role` to `users`
 
 ---
 
-## 8. File Structure
+## 5. Authentication (CRITICAL)
+
+Auth uses **HttpOnly cookies** (not localStorage) to prevent XSS token theft (task #51).
+
+**Flow:**
+1. `POST /api/auth/login` → server verifies password, signs JWT, sets `authToken` cookie (HttpOnly, SameSite=Lax, Secure in prod)
+2. All subsequent requests send the cookie automatically — no `Authorization` header needed
+3. `GET /api/auth/me` → server reads cookie, decodes JWT, returns user object
+4. `POST /api/auth/logout` → server clears cookie
+
+**JWT payload:** `{ id, name, role, scholar_no, section, house, iat, exp }`
+**JWT secret:** `JWT_SECRET` env var (set in Railway dashboard)
+**Expiry:** 7 days
+
+**`client/src/utils/api.js`** — axios instance with `withCredentials: true` on all requests and a 401 interceptor that redirects to `/login`.
+
+**`server/middleware/auth.js`** — reads `req.cookies.authToken`, verifies, sets `req.user`.
+**`server/middleware/roleGuard.js`** — `allowRoles(...roles)` middleware factory.
+
+---
+
+## 6. API Routes
+
+### Auth (`server/routes/auth.js`)
+```
+POST /api/auth/register        — create account (no role guard — anyone can register)
+POST /api/auth/login           — returns user object, sets HttpOnly cookie
+GET  /api/auth/me              — returns current user from cookie
+POST /api/auth/logout          — clears cookie
+```
+
+### Complaints (`server/routes/complaints.js`)
+```
+POST   /api/complaints                        — student raises complaint
+GET    /api/complaints                        — role-filtered list
+  ?status=, ?domain=, ?search=, ?page=, ?limit=
+GET    /api/complaints/:id                    — detail (role-gated fields)
+PATCH  /api/complaints/:id/status             — update status
+PATCH  /api/complaints/:id/assign             — assign council member
+PATCH  /api/complaints/:id/verify             — mark verified
+PATCH  /api/complaints/:id/escalate           — escalate with reveal_identity choice
+PATCH  /api/complaints/:id/resolve            — mark resolved
+PATCH  /api/complaints/:id/close              — mark closed
+PATCH  /api/complaints/:id/reopen             — student reopens within 7 days
+PATCH  /api/complaints/:id/merge              — merge into another complaint
+GET    /api/complaints/consensus-pending      — supervisor: all voting-status complaints
+POST   /api/complaints/:id/request-consensus  — request group vote on sensitive case
+POST   /api/complaints/:id/consensus-vote     — cast approve/reject vote
+GET    /api/complaints/appeals                — principal: all appeals
+PATCH  /api/complaints/appeals/:id/vote       — principal votes uphold/reject on appeal
+```
+
+### Timeline (`server/routes/timeline.js`)
+```
+GET  /api/complaints/:id/timeline  — full audit trail
+POST /api/complaints/:id/timeline  — add note/action
+```
+
+### Notes (`server/routes/notes.js`)
+```
+GET  /api/complaints/:id/notes     — staff-only internal notes
+POST /api/complaints/:id/notes     — add internal note
+```
+
+### Upload (`server/routes/upload.js`)
+```
+POST /api/upload    — multer → sharp (EXIF strip + resize) → Supabase Storage → signed URL
+```
+
+### Users (`server/routes/users.js`)
+```
+GET    /api/users               — list (principal/coordinator/supervisor only)
+  ?role=council_member          — filter by role
+POST   /api/users               — create user (principal/coordinator only)
+PATCH  /api/users/me            — update own profile (house, section, phone)
+PATCH  /api/users/:id/term      — update term dates (principal/coordinator only)
+GET    /api/users/term-expiring  — users whose term ends in ≤30 days
+GET    /api/users/erasure-requests — list erasure requests (coordinator/principal)
+```
+
+### Notifications (`server/routes/notifications.js`)
+```
+GET   /api/notifications        — current user's notifications
+PATCH /api/notifications/:id/read — mark one as read
+PATCH /api/notifications/read-all — mark all as read
+```
+
+### Suggestions (`server/routes/suggestions.js`)
+```
+POST /api/suggestions           — student posts anonymous suggestion
+GET  /api/suggestions           — coordinator/counselor lists suggestions
+PATCH /api/suggestions/:id/reply — counselor replies
+```
+
+### Audit Log (`server/routes/auditLog.js`)
+```
+GET /api/audit-log              — principal/supervisor only, paginated
+  ?action=, ?actor=, ?from=, ?to=
+```
+
+### Workflow Templates (`server/routes/workflowTemplates.js`)
+```
+GET    /api/workflow-templates
+POST   /api/workflow-templates  — coordinator/principal can create
+PATCH  /api/workflow-templates/:id
+DELETE /api/workflow-templates/:id
+```
+
+### Resolution Templates (`server/routes/resolutionTemplates.js`)
+```
+GET    /api/resolution-templates
+POST   /api/resolution-templates
+DELETE /api/resolution-templates/:id
+```
+
+### Delegations (`server/routes/delegations.js`)
+```
+GET    /api/delegations             — own delegations (council) or all (admin)
+POST   /api/delegations             — create delegation with overlap guard
+DELETE /api/delegations/:id         — cancel delegation
+GET    /api/delegations/active-for-me — delegations where I am the delegate
+```
+
+### Health
+```
+GET /health          — { status: 'ok', ts: Date.now() }
+GET /api/health      — same
+GET /api/test-whatsapp — test Twilio WhatsApp sandbox (dev only)
+```
+
+---
+
+## 7. Scheduled Jobs (`server/jobs/autoEscalate.js`)
+
+All jobs run as `node-cron` schedules inside the Railway process:
+
+| Job | Schedule | What it does |
+|-----|----------|-------------|
+| `startAutoEscalateCron` | Every 30 min | Escalates complaints that have breached SLA (72h default) with no action |
+| `startRetentionCron` | 02:30 IST daily | Archives complaints older than 2 years (sets status=`closed`) |
+| `startTermExpiryCron` | 08:00 IST daily | Sends in-app notification to principals for council members whose term ends in ≤30 days |
+
+---
+
+## 8. Key Patterns & Gotchas
+
+### Anonymity system
+- `is_anonymous_requested: true` = student wants privacy
+- `identity_revealed: false` (default) = teachers/coordinators see "Anonymous Student"
+- Council member **always** sees real name
+- On escalation: `EscalateModal` asks "Reveal identity?" → sets `identity_revealed` if YES
+- `server/routes/complaints.js` PATCH `/escalate` → writes `identity_revealed` to DB and logs to timeline
+- Principal and Supervisor bypass the `identity_revealed` flag — always see full names
+
+### HttpOnly cookie auth
+- `withCredentials: true` is set globally on the axios instance in `client/src/utils/api.js`
+- The CORS config in `server/index.js` must have `credentials: true` and a specific `origin` (not `*`)
+- The `CLIENT_URL` env var must match the Vercel domain exactly
+
+### Delegation (task #20)
+- When `GET /api/complaints` is called as `council_member`, the server checks for active delegations:
+  ```js
+  // Fetches all complaints where assigned_council_member_id IN [myId, ...delegatorIds]
+  ```
+- Council member can also access individual complaint details if they are an active delegate for the complaint's assigned handler
+- Delegations are date-range-based (`start_date <= today <= end_date`)
+
+### Consensus voting (task #21)
+- Only applies to `domain IN ('behaviour', 'personal')` for `council_member` role
+- Instead of the Resolve button, they see `RequestConsensusButton`
+- On request: `consensus_status = 'voting'`, requester's vote auto-cast as 'approve'
+- Quorum = 2 approvals → complaint auto-advances to resolution
+- `complaint_votes` table has `UNIQUE(complaint_id, voter_id)` → idempotent upserts
+
+### POSH/POCSO keyword triage (task #49)
+- `server/utils/keywords.js` exports `POSH_KEYWORDS` and `POCSO_KEYWORDS` arrays
+- Checked in `POST /api/complaints` — if matched, domain is auto-set to `posh_pocso`
+- `posh_pocso` complaints skip normal council_member routing and go straight to coordinator + IC members
+- `respondent_type` field added to classify who the complaint is against
+
+### PII masking for council_members (task #79)
+- In complaint list views, council members see `domain + complaint_no` only until they explicitly open the complaint
+- Student name shown only on the full detail view (after deliberate navigation)
+
+### Timestamp jitter (task #73)
+- Anonymous complaints get ±2 hours added to `display_created_at` to prevent correlation attacks
+- Handlers see `display_created_at`, not `created_at`
+
+### Password complexity (task #72)
+- Enforced client-side in `RaiseComplaint.jsx` change-password flow
+- Server-side check in `POST /api/auth/register`: min 8 chars, at least 1 upper, 1 number, 1 special
+
+### VPC gate (task #59)
+- `client/src/pages/VpcGate.jsx` — shown to new students at first login if `vpc_status !== 'approved'`
+- Parent's email is captured, a consent token is emailed to the parent
+- Parent clicks link → `VpcVerify.jsx` sets `vpc_status = 'approved'`
+- `client/src/App.jsx` wraps student routes in a VPC check via `AuthContext`
+
+### Privacy notice gate (task #62)
+- `client/src/components/PrivacyNoticeGate.jsx` — modal shown to ALL users on first login
+- Sets `is_privacy_acknowledged = true` via `PATCH /api/users/me`
+- Once acknowledged, skipped on subsequent logins
+
+---
+
+## 9. Frontend Architecture
+
+### `client/src/App.jsx`
+Route tree with role-based guards. Pattern:
+```jsx
+<Route path="/dashboard" element={
+  <RequireAuth allowedRoles={['student']}>
+    <StudentDashboard />
+  </RequireAuth>
+} />
+```
+After login, role is checked and user is redirected to their role's dashboard.
+
+### `client/src/context/AuthContext.jsx`
+- Provides `user`, `login()`, `logout()`, `loading`
+- On mount: calls `GET /api/auth/me` to restore session from cookie
+- `login()` → calls API, stores user in state (no localStorage)
+- `logout()` → calls `POST /api/auth/logout`, clears state
+
+### `client/src/utils/api.js`
+Axios instance:
+- `baseURL`: `VITE_API_URL` env var
+- `withCredentials: true` on all requests
+- Response interceptor: if 401 received AND not already on `/login`, redirects to `/login`
+
+### `client/src/utils/constants.js`
+Single source of truth for:
+- `DOMAINS` — `{ academics: { label, icon, color }, ... }`
+- `STATUSES` — `{ raised: { label, color, bg }, ... }`
+- `ROLES` — `{ student: 'Student', council_member: 'Council Member', ... }`
+
+### `client/src/hooks/useComplaints.js`
+Custom hook that wraps `GET /api/complaints` with loading/error state and a `refetch()` helper.
+
+---
+
+## 10. Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `EscalateModal` | `EscalateModal.jsx` | Anonymity decision modal — MOST CRITICAL |
+| `Timeline` | `Timeline.jsx` | Chronological audit trail with timestamps |
+| `NotificationBell` | `NotificationBell.jsx` | Navbar bell with unread count badge |
+| `AnalyticsDashboard` | `AnalyticsDashboard.jsx` | Recharts charts: FCR, CSAT, SLA breach rate, domain heatmap, response time histogram |
+| `AuditLogViewer` | `AuditLogViewer.jsx` | Paginated, filterable audit log table |
+| `BulkActionBar` | `BulkActionBar.jsx` | Floating bar for mass status update / bulk assign |
+| `ConsensusVotingPanel` | `ConsensusVotingPanel.jsx` | Lists pending votes; `RequestConsensusButton` exported |
+| `DelegationManager` | `DelegationManager.jsx` | Create/cancel/view delegations |
+| `MeetingAgendaGenerator` | `MeetingAgendaGenerator.jsx` | Auto-generates council meeting agenda from open cases |
+| `TermLimitPanel` | `TermLimitPanel.jsx` | Principal tab: council tenure management + expiry alerts |
+| `WorkflowTemplatesPanel` | `WorkflowTemplatesPanel.jsx` | Template CRUD; `WorkflowTemplatesPanelWithAuth` exported |
+| `MarkdownRenderer` | `MarkdownRenderer.jsx` | DOMPurify-sanitized markdown renderer for complaint descriptions |
+| `RichTextEditor` | `RichTextEditor.jsx` | Bold/bullets/links editor for complaint submission |
+| `PrivacyNoticeGate` | `PrivacyNoticeGate.jsx` | First-login DPDP privacy consent modal |
+| `SessionTimeoutModal` | `SessionTimeoutModal.jsx` | 30-min inactivity warning + auto-logout |
+| `DataErasureModal` | `DataErasureModal.jsx` | Student files erasure request (DPDP Act) |
+| `ErasureRequestsPanel` | `ErasureRequestsPanel.jsx` | Principal tab: review erasure requests |
+| `SuggestionBox` | `SuggestionBox.jsx` | Pre-complaint anonymous Q&A with counselor |
+| `ComplaintProgressBar` | `ComplaintProgressBar.jsx` | Visual lifecycle step indicator for students |
+| `FeedbackCard` | `FeedbackCard.jsx` | CSAT star rating shown after resolution |
+| `ResolutionTemplatePicker` | `ResolutionTemplatePicker.jsx` | Template picker injected into resolve textarea |
+| `MergeModal` | `MergeModal.jsx` | Select target complaint to merge into |
+| `AppealModal` | `AppealModal.jsx` | Student files appeal on closed complaint |
+| `TenureBadge` | exported from `TermLimitPanel.jsx` | Reusable "Xd left" badge for use in other dashboards |
+
+---
+
+## 11. Dashboard Summary
+
+### `StudentDashboard.jsx`
+- Shows only the student's own complaints
+- "Raise a Complaint" CTA button
+- Each card: complaint_no, domain badge, status pill, date, SLA indicator
+- ComplaintProgressBar shows lifecycle stage
+- DataErasureModal can be triggered from profile icon
+
+### `RaiseComplaint.jsx`
+- Domain picker with icons
+- RichTextEditor for description (min 50 chars)
+- FileUpload (optional attachment)
+- Anonymity toggle with explanation text
+- Auto-save draft on blur
+- POSH/POCSO keyword detection (visual warning)
+- On submit: confirmation screen with VOX-XXXX number
+
+### `ComplaintDetail.jsx`
+- Full complaint view for all roles
+- Action buttons are context-aware (shown based on role + current status)
+- Timeline at bottom
+- InternalNotes panel (staff only)
+- Consensus-aware: if council_member + behaviour/personal domain, shows RequestConsensusButton instead of Resolve
+- MarkdownRenderer for description
+
+### `CouncilDashboard.jsx`
+Tabs: Complaints | 🤝 Consensus | 🔁 Delegation
+- Always shows real student name (even if anon requested) with "(Anon Req)" badge
+- BulkActionBar for mass actions
+- ConsensusVotingPanel on consensus tab
+- DelegationManager on delegation tab
+
+### `TeacherDashboard.jsx`
+- Shows complaints escalated to teacher
+- Conditionally renders name based on `identity_revealed`
+
+### `CoordinatorDashboard.jsx`
+Tabs: Complaints | 🔁 Delegations | Suggestions
+- Filterable by status, domain, section
+- DelegationManager tab
+- SuggestionBox counselor-reply interface
+
+### `PrincipalDashboard.jsx`
+Tabs: 📋 Complaints | 📩 Appeals | 📊 Analytics | 🗑️ Erasure Requests | 🔍 Audit Log | ⚙️ Workflows | 👥 Council Tenure
+- Stats row: total raised / resolved / pending / escalated to principal
+- Full-system complaint view with search + filters
+- AppealsPanel (uphold/reject closed complaint appeals)
+- AnalyticsDashboard with Recharts
+- ErasureRequestsPanel
+- AuditLogViewer
+- WorkflowTemplatesPanelWithAuth (read-only)
+- TermLimitPanel (manage council member tenure, expiry alerts)
+
+### `SupervisorDashboard.jsx`
+- Read-only all-system overview
+- Full names always visible
+- Can add notes to any complaint
+- Stats per house/section
+
+### `VicePrincipalDashboard.jsx`
+- Same access as principal
+- Mirror of PrincipalDashboard with VP branding
+
+---
+
+## 12. File Structure (current)
 
 ```
 vox-dpsi/
-├── CLAUDE.md                     ← you are here
-├── README.md                     ← public-facing documentation
-├── schema.sql                    ← run once in Supabase SQL editor
-├── seed.sql                      ← run once after schema.sql
-├── vercel.json                   ← Vercel build config (client only)
-├── railway.json                  ← Railway deploy config (server only)
-├── .gitignore                    ← excludes node_modules, .env files, dist/
+├── CLAUDE.md                      ← THIS FILE — read first
+├── TECHNICAL_DOCS.md              ← older detailed docs (partially stale)
+├── README.md                      ← public-facing summary
+├── schema.sql                     ← complete DB schema — run once in Supabase
+├── schema_and_seed.sql            ← schema + demo seed combined
+├── seed.sql                       ← demo users + sample complaints only
+├── SEED_MIGRATION.sql             ← (in .gitignore) seed with sensitive data
+├── migration_consensus.sql        ← ⚠️ PENDING — run in Supabase SQL editor
+├── migration_delegation.sql       ← ⚠️ PENDING — run in Supabase SQL editor
+├── migration_term_limits.sql      ← ⚠️ PENDING — run in Supabase SQL editor
+├── migration_erasure_feedback.sql ← may already be applied — check Supabase
+├── vercel.json                    ← Vercel build config
+├── railway.json                   ← Railway deploy config
+├── .gitignore
 │
-├── client/                       ← React + Vite frontend
+├── client/
 │   ├── index.html
 │   ├── vite.config.js
-│   ├── tailwind.config.js        ← color tokens: green #1B4D2B, gold #C9920A
+│   ├── tailwind.config.js
 │   ├── postcss.config.js
+│   ├── .env                       ← excluded from git; set in Vercel dashboard
 │   ├── public/
-│   │   ├── dps-logo.png          ← DPS Indore logo (dark bg)
-│   │   ├── dps-logo-light.webp   ← DPS Indore logo (light bg)
-│   │   ├── dps-logo-color.png    ← color version uploaded by user
-│   │   └── presentation/         ← Standalone HTML presentation
-│   │       ├── index.html        ← 11-slide deck (open in browser)
-│   │       ├── deck-stage.js     ← keyboard-navigable slide web component
-│   │       └── assets/           ← logos used inside slides
+│   │   ├── dps-logo.png
+│   │   ├── manifest.json          ← PWA manifest
+│   │   ├── sw.js                  ← service worker
+│   │   └── presentation/          ← standalone HTML presentation (11 slides)
 │   └── src/
-│       ├── App.jsx               ← routes + role-based routing
-│       ├── main.jsx              ← React entry point
-│       ├── index.css             ← Tailwind imports + glass utilities
-│       ├── components/
-│       │   ├── VoxLogo.jsx       ← SVG shield+mic mark + wordmark component
-│       │   ├── Navbar.jsx        ← top nav with role badge
-│       │   ├── ComplaintCard.jsx ← reusable complaint list card
-│       │   ├── StatusPill.jsx    ← colour-coded status badge
-│       │   ├── DomainBadge.jsx   ← domain icon + label badge
-│       │   ├── Timeline.jsx      ← audit trail with timestamps
-│       │   ├── EscalateModal.jsx ← anonymity decision modal (CRITICAL)
-│       │   ├── FileUpload.jsx    ← Supabase Storage upload widget
-│       │   └── LoadingSpinner.jsx
-│       ├── pages/
-│       │   ├── Login.jsx                   ← 6 demo quick-fill buttons
-│       │   ├── StudentDashboard.jsx
-│       │   ├── RaiseComplaint.jsx
-│       │   ├── ComplaintDetail.jsx         ← timeline view
-│       │   ├── CouncilDashboard.jsx        ← always shows real name
-│       │   ├── TeacherDashboard.jsx        ← conditional name display
-│       │   ├── CoordinatorDashboard.jsx
-│       │   ├── PrincipalDashboard.jsx      ← full view + CSV export
-│       │   ├── SupervisorDashboard.jsx
-│       │   └── VicePrincipalDashboard.jsx
+│       ├── App.jsx                ← routes + role guards
+│       ├── main.jsx
+│       ├── index.css              ← Tailwind + glass utilities
+│       ├── i18n/                  ← Hindi/English translations (task #11)
+│       │   ├── en.json
+│       │   └── hi.json
+│       ├── components/            ← (listed in Section 10)
+│       ├── pages/                 ← (listed in Section 11)
 │       ├── context/
-│       │   └── AuthContext.jsx   ← JWT storage, login/logout, user state
+│       │   └── AuthContext.jsx
 │       ├── hooks/
-│       │   └── useComplaints.js  ← complaint fetching hook
+│       │   └── useComplaints.js
 │       └── utils/
-│           ├── api.js            ← axios instance + JWT interceptor + 401 handler
-│           ├── constants.js      ← DOMAINS, STATUSES, COLORS, ROLES maps
-│           └── formatDate.js     ← formatIST(), timeAgo() utilities
+│           ├── api.js             ← axios + withCredentials + 401 interceptor
+│           ├── constants.js       ← DOMAINS, STATUSES, ROLES, COLORS
+│           └── formatDate.js      ← formatIST(), timeAgo()
 │
-└── server/                       ← Node.js + Express backend
-    ├── index.js                  ← server entry, CORS, route mounts
-    ├── package.json              ← "type": "module" (ES modules throughout)
-    ├── Procfile                  ← Railway: "web: node index.js"
-    ├── .env                      ← NEVER COMMITTED — set in Railway dashboard
+└── server/
+    ├── index.js                   ← Express app, middleware, route mounts, cron start
+    ├── package.json               ← "type": "module"; ES modules throughout
+    ├── Procfile                   ← "web: node index.js"
+    ├── .env                       ← excluded from git; set in Railway dashboard
     ├── db/
-    │   └── supabase.js           ← createClient with SERVICE_KEY
+    │   └── supabase.js            ← createClient with SUPABASE_SERVICE_KEY
     ├── middleware/
-    │   ├── auth.js               ← verifyToken middleware (JWT decode)
-    │   └── roleGuard.js          ← allowRoles(...roles) middleware factory
+    │   ├── auth.js                ← verifyToken (reads cookie)
+    │   └── roleGuard.js           ← allowRoles(...roles) factory
     ├── routes/
-    │   ├── auth.js               ← POST /login, GET /me
-    │   ├── complaints.js         ← full CRUD + status workflow + escalation
-    │   ├── timeline.js           ← GET/POST complaint timeline
-    │   ├── upload.js             ← POST /upload → Supabase Storage
-    │   └── users.js              ← GET/POST users (admin only)
+    │   ├── auth.js
+    │   ├── complaints.js          ← largest file; all complaint operations
+    │   ├── timeline.js
+    │   ├── notes.js
+    │   ├── upload.js              ← multer → sharp → Supabase Storage
+    │   ├── users.js               ← includes term management + erasure requests
+    │   ├── notifications.js
+    │   ├── suggestions.js
+    │   ├── auditLog.js
+    │   ├── workflowTemplates.js
+    │   ├── resolutionTemplates.js
+    │   └── delegations.js
+    ├── services/
+    │   ├── email.js               ← nodemailer email sender
+    │   ├── notifications.js       ← in-app notification creator + WhatsApp sender
+    │   └── whatsapp.js            ← Twilio WhatsApp integration
+    ├── jobs/
+    │   └── autoEscalate.js        ← 3 cron jobs: SLA escalate, retention, term-expiry
     └── utils/
-        └── complaintNo.js        ← formats serial → 'VOX-0001'
+        ├── complaintNo.js         ← SERIAL → 'VOX-0001' formatter
+        └── keywords.js            ← POSH_KEYWORDS, POCSO_KEYWORDS arrays
 ```
 
 ---
 
-## 9. Deployment
+## 13. Environment Variables
+
+### `server/.env` (set in Railway dashboard → Variables)
+```
+PORT=5000
+SUPABASE_URL=https://gznhziptmydkalsrazpj.supabase.co
+SUPABASE_SERVICE_KEY=<service_role_key — from Supabase → Settings → API>
+JWT_SECRET=<min 32 char random string>
+CLIENT_URL=https://vox-dpsi.vercel.app
+
+# Nodemailer (any SMTP works)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=arrunabh.s@gmail.com
+SMTP_PASS=<gmail app password>
+SMTP_FROM="Vox DPSI <arrunabh.s@gmail.com>"
+
+# Twilio WhatsApp (task #27 — partially set up)
+TWILIO_ACCOUNT_SID=<from twilio.com>
+TWILIO_AUTH_TOKEN=<from twilio.com>
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+ADMIN_WHATSAPP_NUMBER=+916268549591
+```
+
+### `client/.env` (set in Vercel dashboard → Settings → Environment Variables)
+```
+VITE_API_URL=https://vox-dpsi-production-6d95.up.railway.app
+VITE_SUPABASE_URL=https://gznhziptmydkalsrazpj.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon key — from Supabase → Settings → API>
+```
+
+---
+
+## 14. Deployment
 
 ### Frontend (Vercel)
-Vercel auto-deploys from GitHub on every push to `main`.
+- Auto-deploys from GitHub on every push to `main`
 - Build command: `cd client && npm install && npm run build`
-- Output dir: `client/dist`
-- Env vars set via Vercel dashboard (not in code)
-
-Manual redeploy:
-```bash
-cd vox-dpsi
-npx vercel --prod
-```
+- Output directory: `client/dist`
 
 ### Backend (Railway)
-Railway deploys from GitHub automatically.
-- Root dir: `/server`
+- Auto-deploys from GitHub on every push to `main`
+- Root directory: `server` (configured in Railway dashboard)
 - Start command: `node index.js`
-- Env vars set in Railway dashboard → Variables tab
+- If Railway has `rootDirectory` set to `/server` in its config: start command = `node index.js`
+- If Railway deploys from repo root: start command = `cd server && node index.js`
 
-### Database (Supabase)
-Schema is already deployed. To reset:
-1. Go to https://supabase.com/dashboard/project/gznhziptmydkalsrazpj/sql
-2. Paste + run `schema.sql`
-3. Paste + run `seed.sql`
+**⚠️ Important:** Railway's Nixpacks builder needs to find `package.json` at its root directory.
+The `railway.json` at repo root says `startCommand: "node index.js"` — this only works if
+Railway is configured to use `server/` as the root directory. Verify in Railway dashboard →
+Settings → Source → Root Directory = `server`.
+
+### Database
+Schema already deployed. To re-run:
+1. https://supabase.com/dashboard/project/gznhziptmydkalsrazpj/sql
+2. Paste + run `schema_and_seed.sql`
+3. Then run each pending migration file
 
 ---
 
-## 10. Local Development
+## 15. Local Development
 
 ```bash
-# 1. Install dependencies
-cd vox-dpsi/server && npm install
-cd ../client && npm install
+# Clone
+git clone https://github.com/Arrunabh-Singh/VOX-DPSI.git
+cd vox-dpsi
 
-# 2. Set up env files (copy from .env.example and fill in values)
-cp server/.env.example server/.env
-cp client/.env.example client/.env   # (create if missing)
+# Backend
+cd server
+npm install
+# Create server/.env with values from Section 13
+node index.js        # runs on http://localhost:5000
 
-# 3. Start backend
-cd server && node index.js           # runs on :5000
-
-# 4. Start frontend (separate terminal)
-cd client && npm run dev             # runs on :5173
-
-# 5. Open http://localhost:5173
+# Frontend (new terminal)
+cd client
+npm install
+# Create client/.env with VITE_API_URL=http://localhost:5000
+npm run dev          # runs on http://localhost:5173
 ```
 
 ---
 
-## 11. Presentation
+## 16. Completed Tasks (90 total)
 
-A standalone 11-slide HTML presentation lives at `client/public/presentation/index.html`.
-Open it in any browser — no server needed.
+Tasks 1–26, 30–33, 35–36, 49–60, 62, 64, 68, 71–74, 78–79, 82–90 are **complete**.
 
-**Navigation:**
-- `→` or `Space` — next slide
-- `←` — previous slide
-- `R` — reset to first slide
-- Number keys `1–9` — jump to slide
-
-**Slides:**
-1. Title — VOX DPSI wordmark, DPS logo, live URL, frosted glass info cards
-2. The Problem — 6 frosted glass cards covering each gap
-3. The Inspiration — Indore 311 origin story, Vox etymology
-4. What is Vox DPSI? — bullet list + live Login screen mockup
-5. The 6 Roles — icon cards for all stakeholders
-6. Anonymity System — step-by-step flow with colour-coded decisions
-7. Complaint Flow — 7-step pipeline diagram
-8. App Screens — live HTML recreations of Student Dashboard + Complaint Detail
-9. Technical Stack — full tech breakdown with live links
-10. Why It Matters — closing argument cards
-11. Closing Slide — URL + GitHub + name
-
-Once deployed, the presentation is live at: **https://vox-dpsi.vercel.app/presentation/**
-
----
-
-## 12. Known Issues & Notes
-
-- `server/run_schema.mjs` — a one-off script used to test Supabase connectivity; excluded from git via `.gitignore`
-- The Supabase anon key is safe to expose in frontend code — it's designed for public use
-- The service role key in `server/.env` must never be committed — it has full database access
-- Complaint numbers are formatted as `VOX-0001` (zero-padded 4 digits) — logic in `server/utils/complaintNo.js`
-- All timestamps displayed in IST (UTC+5:30) using `formatIST()` from `utils/formatDate.js`
-- `identity_revealed` defaults to `false`; only set to `true` when council explicitly confirms on escalation
-
----
-
-## 13. Demo Quick Reference
-
-| Role | Email | Password |
-|------|-------|----------|
-| Student | 5001@student.dpsindore.org | demo123 |
-| Council | 5002@student.dpsindore.org | demo123 |
-| Teacher | sharma@staff.dpsindore.org | demo123 |
-| Coordinator | kapil@staff.dpsindore.org | demo123 |
-| Principal | principal@dpsindore.org | demo123 |
-| Supervisor | 5411@student.dpsindore.org | demo123 |
-
-**3-minute demo flow:**
-1. Student → raise complaint (Infrastructure, anonymous, optional attachment)
-2. Council → see "Anon Requested" badge, verify, escalate (choose NO to hide identity)
-3. Coordinator → see anonymous complaint, resolve or escalate
-4. Principal → see full dashboard with stats and CSV export
+Key features built:
+- Full complaint lifecycle (raise → verify → in_progress → escalate → resolve → close → reopen)
+- 8-role RBAC with JWT HttpOnly cookie auth
+- Anonymity system with council-controlled reveal
+- POSH/POCSO keyword triage engine
+- Multilingual (Hindi/English)
+- Rich text editor + markdown rendering
+- Analytics dashboard (FCR, CSAT, SLA breach rate, heatmap, response time histogram)
+- CSV/PDF export
+- Role-based delegation
+- Consensus voting for sensitive cases
+- Audit log viewer
+- Meeting agenda generator
+- Term-limit tracking
+- Email notifications
+- In-app notification bell
+- Session timeout + auto-logout
+- Data retention policy (auto-archive 2yr)
+- PII masking in exports
+- Formal printable complaint reports
+- Resolution template library
+- POSH IC member role
+- VPC (Verifiable Parental Consent) flow
+- Data erasure requests (DPDP Act)
+- Age-appropriate privacy notice
+- PWA manifest + service worker
+- Quick exit button
+- Auto-save drafts
+- Childline/NCPCR crisis links
+- Complaint access log
+- Complaint merging
+- Bulk actions
+- SLA approaching alerts
+- Duplicate detection
+- Scheduled follow-up reminders
 
 ---
 
-*Built by Claude (Anthropic) · April 2026 · Vox DPSI v2.0*
+## 17. Pending Tasks
+
+These tasks are **not yet built**:
+
+| # | Feature | Priority |
+|---|---------|----------|
+| 27 | WhatsApp Notifications (Twilio sandbox partially set up — finish production upgrade) | Medium |
+| 28 | Daily Digest email for handlers (morning summary of pending complaints) | Low |
+| 29 | DPDP Act 2023 compliance audit (schema + flows partially done — formal audit pending) | High |
+| 34 | Knowledge Base / FAQ for students | Low |
+| 37 | Skills-based assignment (route by domain expertise) | Medium |
+| 38 | Load balancing (equal distribution) | Medium |
+| 39 | Auto-assignment rules engine | Medium |
+| 40 | Round-robin fallback assignment | Medium |
+| 41 | AI sentiment analysis on complaint descriptions | Low |
+| 42 | AI auto-categorization by domain | Low |
+| 43 | Gibberish/spam detection | Low |
+| 44 | AI-suggested resolution templates | Low |
+| 45 | Google Calendar integration for follow-up meetings | Low |
+| 46 | SMS notifications via Indian telecom API | Low |
+| 61 | Breach notification plan + incident response playbook | High |
+| 63 | Guardian/parent role (read-only complaint visibility) | Medium |
+| 65 | Staging environment (second Vercel+Railway+Supabase branch) | Medium |
+| 66 | Uptime monitoring (UptimeRobot) | Medium |
+| 67 | Migration rollback scripts | Low |
+| 69 | Pre-complaint safe dialogue channel | Low |
+| 70 | Council member onboarding training module | Low |
+| 75 | Vendor DPAs (Vercel, Railway, Supabase) | High |
+| 76 | DPIA documentation | High |
+| 80 | OTP-based parental verification | Medium |
+| 81 | Mumbai region migration (Supabase ap-south-1, Vercel bom1) | Low |
+
+---
+
+## 18. Demo Flow (3 minutes)
+
+1. Login as `student@dpsi.com` → Raise complaint (Infrastructure, anonymous, attach image)
+2. Login as `council@dpsi.com` → See "(Anon Req)" badge, click Mark Verified → Mark In Progress → Escalate (choose NO to keep identity hidden) → fill reason
+3. Login as `coordinator@dpsi.com` → See complaint as "Anonymous Student" → Resolve with note
+4. Login as `principal@dpsi.com` → See full dashboard stats, Analytics tab, Council Tenure tab
+5. Login as `supervisor@dpsi.com` → See all-system overview, full names always visible
+
+---
+
+*Last updated: May 5, 2026 — Claude (Anthropic) via Cowork mode*
+*Push this file alongside any new feature work so the next AI stays oriented.*
