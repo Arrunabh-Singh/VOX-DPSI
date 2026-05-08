@@ -221,6 +221,96 @@
 
 ---
 
+## Phase 3 — Advanced Features (Post-Alpha 0.2)
+
+### Security Hardening (#51–#55)
+- **JWT → HttpOnly cookie migration (#51):** Eliminated XSS token theft risk; all auth now via secure HttpOnly cookie + `withCredentials: true` on all Axios calls
+- **Rate limiting + Helmet.js (#52):** `express-rate-limit` on all endpoints; `helmet()` for HTTP security headers; Zod schema validation on all request bodies
+- **File upload security (#53):** EXIF metadata stripping on all image uploads; strict file type validation (image/pdf/docx only); max 10MB enforced
+- **DOMPurify sanitisation (#54):** All user-submitted text sanitised server-side + client-side before render; prevents stored XSS
+- **Supabase Storage signed URLs (#55):** All attachment access via time-limited signed URLs; bucket policy enforces private access
+
+### POSH / POCSO Compliance (#49–#50)
+- **Keyword auto-triage (#49):** POSH/POCSO keyword detection auto-routes to school IC members and coordinator, bypassing council member and class teacher entirely
+- **Respondent type field (#50):** Complaint form asks whether complaint is against student, teaching staff, or non-teaching staff; routes differently for staff complaints
+
+### DPDP Act 2023 Compliance (#59–#62)
+- **Verifiable Parental Consent (#59):** First-login gate requires parent to complete OTP-verified consent flow; `is_privacy_acknowledged` and `vpc_status` tracked per student
+- **Data erasure request (#60):** Students/parents can submit erasure requests; tracked in `erasure_requests` table; POSH/POCSO complaints are legal-hold exempt
+- **Privacy notice gate (#62):** Age-appropriate plain-language consent screen shown at first login; consent timestamp recorded
+
+### Additional Role Features
+- **8th role: `vice_principal` and `board_member`** added to RBAC
+- **External IC Member:** Statutory POSH requirement — dedicated role for external IC committee member
+- **Respondent routing:** Staff-respondent complaints skip student council, go directly to coordinator
+
+### Quality-of-Life Features (Large Batch)
+- **Rich text editor (#12):** Markdown + formatting in complaint descriptions and resolution notes; DOMPurify on render
+- **Hindi/English multilingual toggle (#11):** Full UI translation toggle; `useLanguage` context; all strings localised
+- **Visual progress bar (#9):** Step indicator on `ComplaintDetail.jsx` showing lifecycle stage for students
+- **CSAT survey (#10):** 1–5 star rating shown to student after complaint closure; stored in `complaints.feedback_rating`
+- **Auto-save draft (#57):** Complaint form auto-saves to localStorage every 10s; restored on revisit
+- **Quick exit button (#56):** Emergency exit in navbar — one click clears view
+- **Childline / NCPCR crisis links (#58):** Persistent support links displayed on complaint forms and detail pages
+
+### Analytics & Reporting (#13–#19)
+- **FCR metric (#13):** First Contact Resolution rate in analytics dashboard
+- **CSAT per handler (#14):** Per-council-member satisfaction scores
+- **SLA breach rate (#15):** % complaints exceeding SLA shown in analytics
+- **Domain heatmap (#16):** Complaints by domain over time
+- **Escalation rate per handler (#17):** Which council members escalate most
+- **Response time histogram (#18):** Time-to-first-action distribution
+- **Export analytics to PDF/CSV (#19):** Downloadable reports for principal and supervisor
+
+### Governance Features
+- **Role-based delegation (#20):** Council member temporarily delegates their queue to a peer; `delegation_rules` table; `migration_delegation.sql`
+- **Consensus voting (#21):** Multiple council members vote on sensitive/ambiguous complaints; `complaint_votes` table; `migration_consensus.sql`
+- **Audit log viewer (#22):** Dedicated screen for principals showing full system audit trail
+- **Meeting agenda generator (#23):** Auto-generates council meeting agenda from pending/escalated complaints
+- **Term-limit tracking (#24):** Council tenure management; `term_start`, `term_end` on `users` table; `migration_term_limits.sql`
+
+### Notifications (#25–#26)
+- **Email notifications (#25):** Nodemailer SMTP — complaint assignment, escalation, resolution events
+- **In-app notification bell (#26):** Real-time (60s polling) notification center in navbar; mark-as-read
+- **Daily digest (#28):** `node-cron` job sends morning summary email to all handlers at 07:30 IST
+
+### Safety & Compliance UX
+- **Session timeout (#31):** Auto-logout after 30 minutes of inactivity
+- **Data retention (#32):** Auto-archive trigger on complaints older than 2 years
+- **PII masking (#33):** Student names redacted in all CSV/PDF exports
+- **Formal printable complaint report (#35):** Institutional PDF-style report for council records
+- **Consent logging (#30):** Formal consent record when council member chooses to reveal anonymous identity on escalation
+
+---
+
+## Phase 4 — AI Features & Smart Assignment
+
+### AI Assistance (Tasks #37–#44)
+- **Skills-based assignment (#37):** Route complaint to council member whose `domain_expertise` array contains the complaint domain; `migration_skills_assignment.sql` adds `domain_expertise TEXT[]` to users
+- **Load-balanced assignment (#38):** `POST /api/complaints/:id/load-balance-assign` — picks council member with fewest open complaints (statuses: raised/verified/in_progress)
+- **Round-robin assignment (#40):** `POST /api/complaints/:id/auto-assign` — cycles through all council members in deterministic rotation; `round_robin_index` persisted in `system_config` table; `migration_system_config.sql`
+- **AI sentiment analysis (#41):** `client/src/utils/sentimentAnalyzer.js` — classifies complaint tone as distressed/frustrated/neutral/hopeful with confidence score; `SentimentBadge.jsx` shown to staff only
+- **Auto-categorisation (#42):** `client/src/utils/domainClassifier.js` — keyword-based domain suggestions shown as clickable pills on `RaiseComplaint.jsx`
+- **Spam / gibberish detection (#43):** `client/src/utils/spamCheck.js` — detects repeat characters, no whitespace, low vowel ratio; warning shown before submit on `RaiseComplaint.jsx`
+- **Resolution templates (#44):** `client/src/utils/resolutionTemplates.js` — 3 pre-written templates per domain; `ResolutionSuggestions.jsx` shown to council members when resolving; one-click fill
+
+### Knowledge Base (#34)
+- `client/src/pages/KnowledgeBase.jsx` — `/help` route accessible to all roles
+- Real-time search via `useMemo`; accordion FAQ with 3 sections and 13 answers
+- Covers: raising complaints, anonymity, escalation, timelines, account management
+
+---
+
+## Phase 5 — Compliance Documentation
+
+### Legal & Compliance Documents Added to Repository
+- **`BREACH_RESPONSE.md`** — Full incident response playbook: detection, containment, DPDP Act notification timelines, post-incident review, email templates for affected students
+- **`DPIA.md`** — Data Protection Impact Assessment under DPDP Act 2023: risk register, data mapping, privacy-by-design evidence, data subject rights implementation, third-party processor records
+- **`migration_system_config.sql`** — DDL for `system_config` key-value store (round-robin index persistence)
+- **`migration_skills_assignment.sql`** — DDL for `domain_expertise` column on `users`
+
+---
+
 ## Deployment
 
 | Service | URL |
