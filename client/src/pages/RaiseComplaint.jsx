@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { isSuspiciousDescription } from '../utils/spamCheck'
+import { classifyDomain } from '../utils/domainClassifier'
 
 const DPS_SECTIONS = [
   'XII A', 'XII B', 'XII C', 'XII D', 'XII E', 'XII F', 'XII G',
@@ -54,6 +55,7 @@ export default function RaiseComplaint() {
   const [success, setSuccess]                 = useState(null)
   const [section, setSection]                 = useState(draft?.section || user?.section || '')
   const [spamWarning, setSpamWarning]         = useState(false)
+  const [suggestedDomain, setSuggestedDomain] = useState(null)
   // #4 Duplicate Detection — modal state
   const [duplicateWarning, setDuplicateWarning] = useState(null) // { existing: [...] }
   const [house, setHouse]                     = useState(draft?.house || user?.house || '')
@@ -75,6 +77,19 @@ export default function RaiseComplaint() {
     }, 800)
     return () => clearTimeout(t)
   }, [domain, description, isAnonymous, attachmentUrl, priority, respondentType, section, house, success])
+
+  useEffect(() => {
+    if (domain || !description.trim()) {
+      setSuggestedDomain(null)
+      return
+    }
+
+    const t = setTimeout(() => {
+      setSuggestedDomain(classifyDomain(description))
+    }, 600)
+
+    return () => clearTimeout(t)
+  }, [description, domain])
 
   const RESPONDENT_OPTIONS = [
     { key: 'student',            label: '👤 Another student',       desc: 'Peer conflict, bullying, behaviour' },
@@ -257,7 +272,10 @@ export default function RaiseComplaint() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setDomain(key)}
+                  onClick={() => {
+                    setDomain(key)
+                    setSuggestedDomain(null)
+                  }}
                   className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold"
                   style={domain === key
                     ? { borderColor: '#2d5c26', background: '#F0FDF4', color: '#2d5c26' }
@@ -270,6 +288,28 @@ export default function RaiseComplaint() {
           </div>
 
           {/* #8 Workflow template hint — show SLA / urgent info for selected domain */}
+          {!domain && suggestedDomain && DOMAINS[suggestedDomain] && (
+            <div
+              className="rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              style={{ background: 'rgba(45,92,38,0.04)', border: '1.5px solid rgba(45,92,38,0.12)' }}
+            >
+              <p className="text-sm font-semibold" style={{ color: '#2d5c26' }}>
+                Suggested: {DOMAINS[suggestedDomain].icon} {t(`domain.${suggestedDomain}`) || DOMAINS[suggestedDomain].label} — based on your description
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setDomain(suggestedDomain)
+                  setSuggestedDomain(null)
+                }}
+                className="self-start sm:self-auto px-3 py-1.5 rounded-lg text-xs font-black transition-all"
+                style={{ background: '#F0FDF4', color: '#2d5c26', border: '1px solid rgba(45,92,38,0.2)' }}
+              >
+                Use this
+              </button>
+            </div>
+          )}
+
           {domain && domainTemplate && domainTemplate.is_active && (
             <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
               style={{ background: domainTemplate.auto_urgent ? 'rgba(220,38,38,0.05)' : 'rgba(45,92,38,0.04)', border: `1.5px solid ${domainTemplate.auto_urgent ? 'rgba(220,38,38,0.2)' : 'rgba(45,92,38,0.12)'}` }}>

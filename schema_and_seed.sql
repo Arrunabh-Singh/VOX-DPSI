@@ -10,6 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DROP TABLE IF EXISTS escalations       CASCADE;
 DROP TABLE IF EXISTS complaint_timeline CASCADE;
 DROP TABLE IF EXISTS complaints        CASCADE;
+DROP TABLE IF EXISTS system_config     CASCADE;
 DROP TABLE IF EXISTS users             CASCADE;
 DROP SEQUENCE IF EXISTS complaints_complaint_no_seq;
 
@@ -79,6 +80,15 @@ CREATE TABLE complaint_timeline (
 );
 
 -- ── ESCALATIONS ───────────────────────────────────────────────────────────────
+CREATE TABLE system_config (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO system_config (key, value)
+VALUES ('round_robin_index', '0');
+
 CREATE TABLE escalations (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   complaint_id      UUID REFERENCES complaints(id) ON DELETE CASCADE,
