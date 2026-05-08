@@ -22,9 +22,10 @@ import { formatIST } from '../utils/formatDate'
 import { ROLES } from '../utils/constants'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
-import { RequestConsensusButton } from '../components/ConsensusVotingPanel'
+ import { RequestConsensusButton } from '../components/ConsensusVotingPanel'
+ import SentimentBadge from '../components/SentimentBadge'
 
-export default function ComplaintDetail() {
+ export default function ComplaintDetail() {
   const { id } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -787,9 +788,15 @@ export default function ComplaintDetail() {
               <ComplaintProgressBar status={complaint.status} />
             )}
 
-            {/* Description */}
-            <div className="glass rounded-2xl p-6">
-              <h3 className="font-bold mb-3" style={{ color: '#2d5c26' }}>Description</h3>
+             {/* Description */}
+             <div className="glass rounded-2xl p-6">
+               <div className="flex items-center justify-between mb-3">
+                 <h3 className="font-bold" style={{ color: '#2d5c26' }}>Description</h3>
+                 {/* Sentiment analysis badge — visible to staff only */}
+                 {!isStudent && ['council_member', 'coordinator', 'principal', 'supervisor'].includes(role) && (
+                   <SentimentBadge text={complaint.description || ''} />
+                 )}
+               </div>
               {/* PII masking notice for council members who haven't verified in-person yet */}
               {isCouncil && complaint.description_masked && (
                 <div className="rounded-xl px-4 py-3 mb-3 flex items-start gap-2" style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}>

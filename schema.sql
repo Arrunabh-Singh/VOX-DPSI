@@ -73,6 +73,16 @@ CREATE TABLE IF NOT EXISTS complaint_timeline (
 );
 
 -- ── ESCALATIONS ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS system_config (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO system_config (key, value)
+VALUES ('round_robin_index', '0')
+ON CONFLICT (key) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS escalations (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   complaint_id      UUID REFERENCES complaints(id) ON DELETE CASCADE,

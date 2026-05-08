@@ -1275,6 +1275,104 @@ router.patch('/:id/assign', verifyToken, async (req, res) => {
   }
 })
 
+// POST /api/complaints/:id/auto-assign — round-robin assign to next council member
+router.post('/:id/auto-assign', verifyToken, async (req, res) => {
+  try {
+    const { role, id: userId } = req.user
+    if (!['coordinator', 'principal'].includes(role)) {
+      return res.status(403).json({ error: 'Not allowed' })
+    }
+
+    const { id } = req.params
+
+    const { data: complaint, error: complaintErr } = await supabase
+      .from('complaints')
+      .select('id, complaint_no, domain')
+      .eq('id', id)
+      .single()
+
+    if (complaintErr || !complaint) {
+      return res.status(404).json({ error: 'Complaint not found' })
+    }
+
+    const { data: members, error: membersErr } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('role', 'council_member')
+      .order('created_at', { ascending: true })
+
+    if (membersErr) throw membersErr
+    if (!members || members.length === 0) {
+      return res.status(400).json({ error: 'No council members available for auto-assignment' })
+    }
+
+    const { data: configRows, error: configErr } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'round_robin_index')
+      .limit(1)
+
+    if (configErr) throw configErr
+
+    const currentIndex = Number.parseInt(configRows?.[0]?.value || '0', 10)
+    const safeIndex = Number.isFinite(currentIndex) && currentIndex >= 0 ? currentIndex : 0
+    const assignedMember = members[safeIndex % members.length]
+    const nextIndex = safeIndex + 1
+    const now = new Date().toISOString()
+
+    const { data: updatedComplaint, error: updateErr } = await supabase
+      .from('complaints')
+      .update({
+        assigned_council_member_id: assignedMember.id,
+        current_handler_role: 'council_member',
+        updated_at: now,
+      })
+      .eq('id', id)
+      .select('id, complaint_no, domain, assigned_council_member_id')
+      .single()
+
+    if (updateErr) throw updateErr
+
+    const { error: configSaveErr } = await supabase
+      .from('system_config')
+      .upsert({
+        key: 'round_robin_index',
+        value: String(nextIndex),
+        updated_at: now,
+      }, { onConflict: 'key' })
+
+    if (configSaveErr) throw configSaveErr
+
+    await supabase.from('complaint_timeline').insert({
+      complaint_id: id,
+      action: `🔁 Auto-assigned to ${assignedMember.name}`,
+      performed_by: userId,
+      performed_by_role: role,
+      note: `Round-robin index ${safeIndex} selected ${assignedMember.name}. Next index: ${nextIndex}.`,
+    }).catch(() => {})
+
+    notifyAssignment(
+      assignedMember.id,
+      formatComplaintNo(updatedComplaint.complaint_no),
+      updatedComplaint.domain,
+      id
+    )
+
+    res.json({
+      message: 'Complaint auto-assigned',
+      complaint_id: id,
+      complaint_no_display: formatComplaintNo(updatedComplaint.complaint_no),
+      assigned_member: {
+        id: assignedMember.id,
+        name: assignedMember.name,
+      },
+    })
+  } catch (err) {
+    console.error('Auto-assignment error:', err)
+    res.status(500).json({ error: 'Auto-assignment failed' })
+  }
+})
+
 // GET /api/complaints/:id/viewers — active viewers in the last 5 min (#1 presence)
 // Used by client to display "X is also viewing this" collision warning
 router.get('/:id/viewers', verifyToken, async (req, res) => {
