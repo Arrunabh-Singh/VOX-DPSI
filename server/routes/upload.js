@@ -67,7 +67,7 @@ router.post('/', verifyToken, upload.single('file'), async (req, res) => {
     if (['image/jpeg', 'image/png', 'image/webp'].includes(mimetype)) {
       try {
         processedBuffer = await sharp(buffer)
-          .withMetadata(false)  // strip all EXIF/IPTC/XMP metadata
+          .rotate()
           .toBuffer()
         // Output format stays the same; sharp re-encodes in the same format by default
       } catch (sharpErr) {
