@@ -24,6 +24,7 @@ import api from '../utils/api'
 import toast from 'react-hot-toast'
  import { RequestConsensusButton } from '../components/ConsensusVotingPanel'
  import SentimentBadge from '../components/SentimentBadge'
+ import ResolutionSuggestions from '../components/ResolutionSuggestions'
 
  export default function ComplaintDetail() {
   const { id } = useParams()
@@ -954,15 +955,23 @@ import toast from 'react-hot-toast'
                   })()}
                   {showResolveInput && (
                     <div className="rounded-xl p-3 space-y-2" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-green-700">{t('detail.resolveNote')} ({t('common.optional')})</p>
-                        <button
-                          onClick={() => setShowTemplatePicker(true)}
-                          className="text-xs font-semibold px-2 py-1 rounded-lg transition-all"
-                          style={{ background: 'rgba(45,92,38,0.08)', color: '#2d5c26', border: '1px solid rgba(45,92,38,0.2)' }}
-                        >{t('detail.useTemplate')}</button>
-                      </div>
-                      <textarea
+                       <div className="flex items-center justify-between">
+                         <p className="text-xs font-semibold text-green-700">{t('detail.resolveNote')} ({t('common.optional')})</p>
+                         <button
+                           onClick={() => setShowTemplatePicker(true)}
+                           className="text-xs font-semibold px-2 py-1 rounded-lg transition-all"
+                           style={{ background: 'rgba(45,92,38,0.08)', color: '#2d5c26', border: '1px solid rgba(45,92,38,0.2)' }}
+                         >{t('detail.useTemplate')}</button>
+                       </div>
+                       {/* AI-suggested resolution snippets — council members only */}
+                       {isCouncil && (
+                         <ResolutionSuggestions
+                           domain={complaint.domain}
+                           onSelect={(text) => setResolveNote(text)}
+                           selectedText={resolveNote}
+                         />
+                       )}
+                       <textarea
                         value={resolveNote}
                         onChange={e => setResolveNote(e.target.value)}
                         rows={2}
