@@ -23,7 +23,7 @@ ALTER SEQUENCE complaints_complaint_no_seq RESTART WITH 1;
 -- ═══════════════════════════════════════════════════════════
 INSERT INTO users (id, name, email, password_hash, role, scholar_no, section, house) VALUES
   -- Demo student (sees exactly 7 complaints)
-  ('11111111-1111-1111-1111-111111111111', 'Rahul Sharma',          'student@dpsi.com',       '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'student',        '5001', 'XII B', 'Prithvi'),
+  ('11111111-1111-1111-1111-111111111111', 'Rahul Sharma',          '5411@student.dpsindore.org',       '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'student',        '5001', 'XII B', 'Prithvi'),
   -- Demo council member
   ('22222222-2222-2222-2222-222222222222', 'Priya Verma',           'council@dpsi.com',       '$2a$12$X0tpanbG.FRokosj6hhb4u.Fglm.4y5zUjpvlYeKF03TrVyi11SGe', 'council_member', '5002', 'XII B', 'Agni'),
   -- Class teacher (XII B matches Rahul's section)

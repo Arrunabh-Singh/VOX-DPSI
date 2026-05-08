@@ -116,7 +116,7 @@ Auth uses **HttpOnly cookies** (NOT localStorage). Migrated in task #51 to preve
 
 | Role | Email | Password |
 |------|-------|----------|
-| student | student@dpsi.com | demo123 |
+| student | 5411@student.dpsindore.org | demo123 |
 | council_member | council@dpsi.com | demo123 |
 | class_teacher | teacher@dpsi.com | demo123 |
 | coordinator | coordinator@dpsi.com | demo123 |

@@ -47,7 +47,7 @@ Class Teacher → Coordinator → Principal. Every action is permanently logged.
 
 | Role | Demo email | Dashboard | Key permission |
 |------|-----------|-----------|----------------|
-| `student` | student@dpsi.com | StudentDashboard | Own complaints only |
+| `student` | 5411@student.dpsindore.org | StudentDashboard | Own complaints only |
 | `council_member` | council@dpsi.com | CouncilDashboard | Assigned complaints; always sees real name |
 | `supervisor` | supervisor@dpsi.com | SupervisorDashboard | All complaints read-only + notes |
 | `class_teacher` | teacher@dpsi.com | TeacherDashboard | Escalated-to-teacher complaints |
@@ -864,7 +864,7 @@ These tasks are **not yet built**:
 
 ## 18. Demo Flow (3 minutes)
 
-1. Login as `student@dpsi.com` → Raise complaint (Infrastructure, anonymous, attach image)
+1. Login as `5411@student.dpsindore.org` → Raise complaint (Infrastructure, anonymous, attach image)
 2. Login as `council@dpsi.com` → See "(Anon Req)" badge, click Mark Verified → Mark In Progress → Escalate (choose NO to keep identity hidden) → fill reason
 3. Login as `coordinator@dpsi.com` → See complaint as "Anonymous Student" → Resolve with note
 4. Login as `principal@dpsi.com` → See full dashboard stats, Analytics tab, Council Tenure tab

@@ -6,7 +6,7 @@ import api from '../utils/api'
 import toast from 'react-hot-toast'
 
 const demoAccounts = [
-  { label: 'Student',     name: 'Rahul Sharma',          email: 'student@dpsi.com',           color: '#2563EB' },
+  { label: 'Student',     name: 'Rahul Sharma',          email: '5411@student.dpsindore.org', color: '#2563EB' },
   { label: 'Council',     name: 'Priya Verma',           email: 'council@dpsi.com',           color: '#16A34A' },
   { label: 'Teacher',     name: 'Mrs. Sharma',           email: 'teacher@dpsi.com',           color: '#7C3AED' },
   { label: 'Coordinator', name: 'Mr. Kapil',             email: 'coordinator@dpsi.com',       color: '#EA580C' },

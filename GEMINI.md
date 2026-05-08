@@ -132,7 +132,7 @@ Auth uses **HttpOnly cookies** (not localStorage). This was migrated in task #51
 
 | Role | Email | Password |
 |------|-------|----------|
-| student | student@dpsi.com | demo123 |
+| student | 5411@student.dpsindore.org | demo123 |
 | council_member | council@dpsi.com | demo123 |
 | class_teacher | teacher@dpsi.com | demo123 |
 | coordinator | coordinator@dpsi.com | demo123 |
@@ -201,7 +201,7 @@ If it's blank, the `node index.js` start command won't find `index.js`.
 
 1. **Verify Railway deployed** — check https://vox-dpsi-production-6d95.up.railway.app/health returns `{"status":"ok"}`
 2. **Run the 3 pending migrations** in Supabase SQL editor (listed above)
-3. **Test login** at https://vox-dpsi.vercel.app with `student@dpsi.com` / `demo123`
+3. **Test login** at https://vox-dpsi.vercel.app with `5411@student.dpsindore.org` / `demo123`
 4. **Next task to build:** Pick from the pending list above — #63 (Guardian/parent role) or #28 (Daily digest) are good next candidates
 
 ---
