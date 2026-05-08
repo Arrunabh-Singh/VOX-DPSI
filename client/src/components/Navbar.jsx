@@ -8,7 +8,7 @@ import { useLanguage } from '../context/LanguageContext'
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { lang, toggleLang } = useLanguage()
+  const { lang, toggleLang, t } = useLanguage()
 
   const handleLogout = () => {
     logout()

@@ -21,7 +21,8 @@
 
 @layer base {
   * { box-sizing: border-box; }
-  html, body, #root { height: 100%; }
+  html { height: 100%; }
+  body, #root { min-height: 100vh; }
 
   body {
     font-family: 'Inter', system-ui, sans-serif;

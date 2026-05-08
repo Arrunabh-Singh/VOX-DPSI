@@ -324,7 +324,8 @@ export default function Login() {
                   key={i}
                   ref={el => otpRefs.current[i] = el}
                   type="text" inputMode="numeric" pattern="\d*"
-                  maxLength={1} value={digit}
+                  maxLength={2} value={digit}
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
                   onChange={e => handleOtpChange(i, e.target.value)}
                   onKeyDown={e => handleOtpKeyDown(i, e)}
                   autoFocus={i === 0}
@@ -337,8 +338,9 @@ export default function Login() {
                     borderRadius: '12px', outline: 'none',
                     transition: 'border-color 0.15s, background 0.15s',
                     color: '#1a1a1a',
+                    caretColor: 'transparent',
                   }}
-                  onFocus={e => e.target.style.borderColor = NAV}
+                  onFocus={e => { e.target.style.borderColor = NAV; e.target.select() }}
                   onBlur={e => e.target.style.borderColor = digit ? NAV : 'rgba(45,92,38,0.25)'}
                 />
               ))}
