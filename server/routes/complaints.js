@@ -2351,9 +2351,117 @@ router.post('/:id/auto-assign', verifyToken, async (req, res) => {
         name: assignedMember.name,
       },
     })
+   } catch (err) {
+     console.error('Auto-assignment error:', err)
+     res.status(500).json({ error: 'Auto-assignment failed' })
+   }
+ })
+
+// POST /api/complaints/:id/load-balance-assign — assign to council member with fewest open complaints (#38)
+router.post('/:id/load-balance-assign', verifyToken, async (req, res) => {
+  try {
+    const { role, id: userId } = req.user
+    if (!['coordinator', 'principal'].includes(role)) {
+      return res.status(403).json({ error: 'Not allowed' })
+    }
+
+    const { id } = req.params
+
+    // Verify complaint exists
+    const { data: complaint, error: complaintErr } = await supabase
+      .from('complaints')
+      .select('id, complaint_no, domain')
+      .eq('id', id)
+      .single()
+    if (complaintErr || !complaint) {
+      return res.status(404).json({ error: 'Complaint not found' })
+    }
+
+    // Fetch all council members ordered deterministically (earliest first for tie-breaking)
+    const { data: members, error: membersErr } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('role', 'council_member')
+      .order('created_at', { ascending: true })
+    if (membersErr) throw membersErr
+    if (!members || members.length === 0) {
+      return res.status(400).json({ error: 'No council members available for load-balanced assignment' })
+    }
+
+    // Count open complaints for each council member
+    // Open statuses: raised, verified, in_progress
+    const { data: openComplaints, error: openErr } = await supabase
+      .from('complaints')
+      .select('assigned_council_member_id, status')
+      .in('status', ['raised', 'verified', 'in_progress'])
+    if (openErr) throw openErr
+
+    // Build map: memberId -> openCount
+    const openCountMap = {}
+    for (const row of (openComplaints || [])) {
+      const mid = row.assigned_council_member_id
+      if (mid) {
+        openCountMap[mid] = (openCountMap[mid] || 0) + 1
+      }
+    }
+
+    // Find member with lowest open count; if tie, pick earliest created_at (first in members array)
+    let bestMember = members[0]
+    let bestCount = openCountMap[bestMember.id] || 0
+    for (let i = 1; i < members.length; i++) {
+      const m = members[i]
+      const cnt = openCountMap[m.id] || 0
+      if (cnt < bestCount) {
+        bestMember = m
+        bestCount = cnt
+      }
+      // If tie, retain earlier member (lower index preserves earlier created_at)
+    }
+
+    // Perform assignment
+    const now = new Date().toISOString()
+    const { data: updated, error: updateErr } = await supabase
+      .from('complaints')
+      .update({
+        assigned_council_member_id: bestMember.id,
+        current_handler_role: 'council_member',
+        updated_at: now,
+      })
+      .eq('id', id)
+      .select('id, complaint_no, domain, assigned_council_member_id')
+      .single()
+    if (updateErr) throw updateErr
+
+    // Timeline entry
+    await supabase.from('complaint_timeline').insert({
+      complaint_id: id,
+      action: `⚖️ Load-balanced assignment to ${bestMember.name}`,
+      performed_by: userId,
+      performed_by_role: role,
+      note: `${bestMember.name} had ${bestCount} open complaint(s) — the lowest among council members.`,
+    })
+
+    // Notify assigned member
+    notifyAssignment(
+      bestMember.id,
+      formatComplaintNo(updated.complaint_no),
+      updated.domain,
+      id
+    )
+
+    res.json({
+      message: 'Complaint assigned via load-balancing',
+      complaint_id: id,
+      complaint_no_display: formatComplaintNo(updated.complaint_no),
+      assigned_member: {
+        id: bestMember.id,
+        name: bestMember.name,
+        open_count_before_assignment: bestCount,
+      },
+    })
   } catch (err) {
-    console.error('Auto-assignment error:', err)
-    res.status(500).json({ error: 'Auto-assignment failed' })
+    console.error('Load-balance assignment error:', err)
+    res.status(500).json({ error: 'Load-balance assignment failed' })
   }
 })
 
