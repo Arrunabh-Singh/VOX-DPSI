@@ -18,6 +18,7 @@ function KeepAlive() {
 import Login from './pages/Login'
 import StudentDashboard from './pages/StudentDashboard'
 import RaiseComplaint from './pages/RaiseComplaint'
+import KnowledgeBase from './pages/KnowledgeBase'
 import ComplaintDetail from './pages/ComplaintDetail'
 import CouncilDashboard from './pages/CouncilDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RequireAuth><RoleRouter /></RequireAuth>} />
           <Route path="/raise" element={<RequireAuth><RaiseComplaint /></RequireAuth>} />
+          <Route path="/help" element={<RequireAuth><KnowledgeBase /></RequireAuth>} />
           <Route path="/complaints/:id" element={<RequireAuth><ComplaintDetail /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

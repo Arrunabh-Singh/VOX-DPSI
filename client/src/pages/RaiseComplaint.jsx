@@ -6,6 +6,7 @@ import { DOMAINS } from '../utils/constants'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
+import { isSuspiciousDescription } from '../utils/spamCheck'
 
 const DPS_SECTIONS = [
   'XII A', 'XII B', 'XII C', 'XII D', 'XII E', 'XII F', 'XII G',
@@ -32,13 +33,12 @@ export default function RaiseComplaint() {
   const [success, setSuccess]         = useState(null)
   const [section, setSection]         = useState(user?.section || '')
   const [house, setHouse]             = useState(user?.house || '')
+  const [spamWarning, setSpamWarning] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!domain) return toast.error('Please select a domain')
-    if (description.length < 50) return toast.error('Description must be at least 50 characters')
+  const doSubmit = async () => {
     setLoading(true)
     try {
+      setSpamWarning(false)
       // If student updated their house/section, sync to profile
       if ((house && house !== user?.house) || (section && section !== user?.section)) {
         const updates = {}
@@ -58,6 +58,17 @@ export default function RaiseComplaint() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!domain) return toast.error('Please select a domain')
+    if (description.length < 50) return toast.error('Description must be at least 50 characters')
+    if (isSuspiciousDescription(description)) {
+      setSpamWarning(true)
+      return
+    }
+    await doSubmit()
   }
 
   if (success) {
@@ -199,7 +210,10 @@ export default function RaiseComplaint() {
             <p className="text-xs text-gray-400 mb-3">Minimum 50 characters. Be specific and factual.</p>
             <textarea
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={e => {
+                setDescription(e.target.value)
+                setSpamWarning(false)
+              }}
               rows={5}
               placeholder="Describe the issue in detail. Include location, time, people involved, and what outcome you expect..."
               className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none transition-all"
@@ -269,6 +283,35 @@ export default function RaiseComplaint() {
           </div>
 
           {/* Submit */}
+          {spamWarning && (
+            <div
+              className="rounded-2xl px-4 py-3"
+              style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}
+            >
+              <p className="text-sm font-bold mb-3" style={{ color: '#92400E' }}>
+                Your description looks unusual. Are you sure it's clear enough for the council to act on?
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={doSubmit}
+                  disabled={loading}
+                  className="flex-1 rounded-xl px-4 py-2.5 text-sm font-black transition-all disabled:opacity-60"
+                  style={{ background: '#D97706', color: '#FFFBEB' }}
+                >
+                  {loading ? 'Submitting...' : 'Submit Anyway'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSpamWarning(false)}
+                  className="flex-1 rounded-xl px-4 py-2.5 text-sm font-bold transition-all"
+                  style={{ background: 'transparent', color: '#92400E', border: '1.5px solid #FCD34D' }}
+                >
+                  Let me revise
+                </button>
+              </div>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
