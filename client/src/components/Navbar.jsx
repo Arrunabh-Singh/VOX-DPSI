@@ -62,6 +62,23 @@ export default function Navbar() {
 
             <NotificationBell />
 
+            <button
+              onClick={() => navigate('/help')}
+              className="flex items-center gap-1 rounded-lg text-xs font-black transition-all"
+              style={{
+                background: 'rgba(255,215,0,0.16)',
+                color: '#FFD700',
+                border: '1px solid rgba(255,215,0,0.32)',
+                padding: '6px 10px',
+              }}
+              title="Open Knowledge Base"
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,215,0,0.24)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,215,0,0.16)' }}
+            >
+              <span>❓</span>
+              <span className="hidden sm:inline">Help</span>
+            </button>
+
             {/* Language toggle */}
             <button
               onClick={toggleLang}

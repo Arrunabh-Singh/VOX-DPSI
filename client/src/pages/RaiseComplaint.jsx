@@ -9,6 +9,7 @@ import api from '../utils/api'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
+import { isSuspiciousDescription } from '../utils/spamCheck'
 
 const DPS_SECTIONS = [
   'XII A', 'XII B', 'XII C', 'XII D', 'XII E', 'XII F', 'XII G',
@@ -52,6 +53,7 @@ export default function RaiseComplaint() {
   const [loading, setLoading]                 = useState(false)
   const [success, setSuccess]                 = useState(null)
   const [section, setSection]                 = useState(draft?.section || user?.section || '')
+  const [spamWarning, setSpamWarning]         = useState(false)
   // #4 Duplicate Detection — modal state
   const [duplicateWarning, setDuplicateWarning] = useState(null) // { existing: [...] }
   const [house, setHouse]                     = useState(draft?.house || user?.house || '')
@@ -86,6 +88,7 @@ export default function RaiseComplaint() {
   const doSubmit = async (force = false) => {
     setLoading(true)
     try {
+      setSpamWarning(false)
       // If student updated their house/section, sync to profile
       if ((house && house !== user?.house) || (section && section !== user?.section)) {
         const updates = {}
@@ -104,6 +107,7 @@ export default function RaiseComplaint() {
       })
       clearDraft()
       setDuplicateWarning(null)
+      setSpamWarning(false)
       setSuccess(res.data)
     } catch (err) {
       // #4 Duplicate detection — show modal, don't dismiss with a toast
@@ -121,6 +125,10 @@ export default function RaiseComplaint() {
     e.preventDefault()
     if (!domain) return toast.error('Please select a domain')
     if (description.length < 50) return toast.error('Description must be at least 50 characters')
+    if (isSuspiciousDescription(description)) {
+      setSpamWarning(true)
+      return
+    }
     await doSubmit(false)
   }
 
@@ -373,7 +381,10 @@ export default function RaiseComplaint() {
             <p className="text-xs text-gray-400 mb-3">Write in your own words. There's no wrong way to say it — include as much detail as you feel comfortable sharing.</p>
             <RichTextEditor
               value={description}
-              onChange={setDescription}
+              onChange={(value) => {
+                setDescription(value)
+                setSpamWarning(false)
+              }}
               placeholder={t('raise.desc.placeholder')}
               rows={5}
               minLength={50}
@@ -438,6 +449,35 @@ export default function RaiseComplaint() {
           </div>
 
           {/* Submit */}
+          {spamWarning && (
+            <div
+              className="rounded-2xl px-4 py-3"
+              style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}
+            >
+              <p className="text-sm font-bold mb-3" style={{ color: '#92400E' }}>
+                Your description looks unusual. Are you sure it's clear enough for the council to act on?
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => doSubmit(false)}
+                  disabled={loading}
+                  className="flex-1 rounded-xl px-4 py-2.5 text-sm font-black transition-all disabled:opacity-60"
+                  style={{ background: '#D97706', color: '#FFFBEB' }}
+                >
+                  {loading ? 'Submitting...' : 'Submit Anyway'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSpamWarning(false)}
+                  className="flex-1 rounded-xl px-4 py-2.5 text-sm font-bold transition-all"
+                  style={{ background: 'transparent', color: '#92400E', border: '1.5px solid #FCD34D' }}
+                >
+                  Let me revise
+                </button>
+              </div>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
