@@ -2160,4 +2160,103 @@ router.post('/:id/consensus-vote', verifyToken, async (req, res) => {
   }
 })
 
+// POST /api/complaints/:id/auto-assign — round-robin assign to next council member (#40)
+router.post('/:id/auto-assign', verifyToken, async (req, res) => {
+  try {
+    const { role, id: userId } = req.user
+    if (!['coordinator', 'principal'].includes(role)) {
+      return res.status(403).json({ error: 'Not allowed' })
+    }
+
+    const { id } = req.params
+
+    // Verify complaint exists
+    const { data: complaint, error: complaintErr } = await supabase
+      .from('complaints')
+      .select('id, complaint_no, domain')
+      .eq('id', id)
+      .single()
+    if (complaintErr || !complaint) {
+      return res.status(404).json({ error: 'Complaint not found' })
+    }
+
+    // Fetch all council members ordered deterministically
+    const { data: members, error: membersErr } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('role', 'council_member')
+      .order('created_at', { ascending: true })
+    if (membersErr) throw membersErr
+    if (!members || members.length === 0) {
+      return res.status(400).json({ error: 'No council members available for auto-assignment' })
+    }
+
+    // Read current round-robin index from system_config
+    const { data: configRows, error: configErr } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'round_robin_index')
+      .limit(1)
+    if (configErr) throw configErr
+
+    const rawIndex       = Number.parseInt(configRows?.[0]?.value ?? '0', 10)
+    const safeIndex      = Number.isFinite(rawIndex) && rawIndex >= 0 ? rawIndex : 0
+    const assignedMember = members[safeIndex % members.length]
+    const nextIndex      = safeIndex + 1
+    const now            = new Date().toISOString()
+
+    // Assign the complaint
+    const { data: updated, error: updateErr } = await supabase
+      .from('complaints')
+      .update({
+        assigned_council_member_id: assignedMember.id,
+        current_handler_role:       'council_member',
+        updated_at:                 now,
+      })
+      .eq('id', id)
+      .select('id, complaint_no, domain, assigned_council_member_id')
+      .single()
+    if (updateErr) throw updateErr
+
+    // Persist incremented index (upsert is safe for first-run)
+    const { error: configSaveErr } = await supabase
+      .from('system_config')
+      .upsert(
+        { key: 'round_robin_index', value: String(nextIndex), updated_at: now },
+        { onConflict: 'key' }
+      )
+    if (configSaveErr) throw configSaveErr
+
+    // Audit trail — timeline entry
+    await supabase.from('complaint_timeline').insert({
+      complaint_id:      id,
+      action:            `🔁 Auto-assigned to ${assignedMember.name}`,
+      performed_by:      userId,
+      performed_by_role: role,
+      note:              `Round-robin index ${safeIndex} → selected ${assignedMember.name}. Next index: ${nextIndex}.`,
+    })
+
+    // In-app + email notification to the assigned member
+    notifyAssignment(
+      assignedMember.id,
+      formatComplaintNo(updated.complaint_no),
+      updated.domain,
+      id
+    )
+
+    res.json({
+      message:              'Complaint auto-assigned via round-robin',
+      complaint_id:         id,
+      complaint_no_display: formatComplaintNo(updated.complaint_no),
+      assigned_member: {
+        id:   assignedMember.id,
+        name: assignedMember.name,
+      },
+    })
+  } catch (err) {
+    console.error('Auto-assignment error:', err)
+    res.status(500).json({ error: 'Auto-assignment failed' })
+  }
+})
+
 export default router
