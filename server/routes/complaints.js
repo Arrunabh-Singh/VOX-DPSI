@@ -289,6 +289,14 @@ router.get('/', verifyToken, async (req, res) => {
 
     if (role === 'student') {
       query = query.eq('student_id', userId)
+    } else if (role === 'guardian') {
+      // #63 — Guardian sees complaints linked to their children via vpc_parent_email
+      const { data: children } = await supabase
+        .from('users')
+        .select('id')
+        .eq('vpc_parent_email', req.user.email)
+      const childIds = (children || []).map(c => c.id)
+      query = query.in('student_id', childIds)
     } else if (role === 'council_member') {
       // #20 — Also include complaints delegated to this council member today
       const today = new Date().toISOString().slice(0, 10)
@@ -379,6 +387,15 @@ router.get('/:id', verifyToken, async (req, res) => {
     // Access control
     if (role === 'student' && complaint.student_id !== userId) {
       return res.status(403).json({ error: 'Access denied' })
+    }
+    if (role === 'guardian') {
+      const { data: child } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', complaint.student_id)
+        .eq('vpc_parent_email', req.user.email)
+        .maybeSingle()
+      if (!child) return res.status(403).json({ error: 'Access denied' })
     }
     if (role === 'council_member' && complaint.assigned_council_member_id !== userId) {
       // #20 — allow delegate access

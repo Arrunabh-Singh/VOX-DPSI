@@ -379,3 +379,47 @@ export async function sendDailyDigestEmail(toEmail, toName, role, complaints) {
     console.log(`[Email:Digest] Would send to: ${toEmail} — ${complaints.length} complaints`)
   }
 }
+
+// ── Login OTP Email (#91) ────────────────────────────────────────────────────
+
+/**
+ * Send a 6-digit login OTP to a user's registered email address.
+ * Valid for 10 minutes.
+ */
+export async function sendLoginOtpEmail(toEmail, toName, otp) {
+  const info = await transporter.sendMail({
+    from:    FROM_ADDR,
+    to:      toEmail,
+    subject: `${otp} — Your Vox DPSI login code`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Inter,Arial,sans-serif;background:#f5f7fa;margin:0;padding:24px">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+  <div style="background:#2d5c26;padding:20px 28px;text-align:center">
+    <p style="color:#c9a84c;font-size:20px;font-weight:900;margin:0;letter-spacing:1px">VOX DPSI</p>
+    <p style="color:rgba(255,255,255,0.65);font-size:11px;margin:4px 0 0">Delhi Public School Indore</p>
+  </div>
+  <div style="padding:28px 32px;text-align:center">
+    <p style="color:#1A1A1A;font-size:15px;font-weight:700;margin:0 0 8px">Login Verification Code</p>
+    <p style="color:#4B5563;font-size:13px;margin:0 0 24px">Hi ${toName}, use the code below to complete your sign-in.</p>
+    <div style="background:#F0FDF4;border:2px solid #86EFAC;border-radius:12px;padding:20px;margin:0 0 20px;display:inline-block;min-width:200px">
+      <p style="font-size:40px;font-weight:900;letter-spacing:10px;color:#2d5c26;margin:0;font-family:monospace">${otp}</p>
+    </div>
+    <p style="color:#6B7280;font-size:12px;margin:0 0 4px">This code expires in <strong>10 minutes</strong>.</p>
+    <p style="color:#9CA3AF;font-size:11px;margin:0">If you didn't try to sign in, ignore this email — your account is safe.</p>
+  </div>
+  <div style="background:#F9FAFB;padding:16px 28px;text-align:center;border-top:1px solid #E5E7EB">
+    <p style="color:#9CA3AF;font-size:11px;margin:0">Vox DPSI · Student Grievance Management System · DPS Indore</p>
+  </div>
+</div>
+</body></html>`,
+    text: `Hi ${toName},\n\nYour Vox DPSI login code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`,
+  })
+
+  if (!process.env.SMTP_HOST) {
+    console.log(`[Email:OTP] SMTP not configured — OTP for ${toEmail}: ${otp}`)
+  }
+  return info
+}

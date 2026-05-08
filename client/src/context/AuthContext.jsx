@@ -58,6 +58,17 @@ export function AuthProvider({ children }) {
     return user
   }
 
+  // Called after verify-login-otp sets the HttpOnly cookie — fetches /me and
+  // updates React state so RequireAuth doesn't redirect back to /login.
+  const loginWithCookie = async () => {
+    const res = await api.get('/api/auth/me')
+    const userData = res.data
+    localStorage.setItem('vox_user', JSON.stringify(userData))
+    localStorage.setItem('vox_auth_time', String(Date.now()))
+    setUser(userData)
+    return userData
+  }
+
   const logout = async () => {
     // Tell server to clear the HttpOnly cookie
     try { await api.post('/api/auth/logout') } catch {}
@@ -69,7 +80,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithCookie, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   )

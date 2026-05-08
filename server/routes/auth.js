@@ -4,7 +4,35 @@ import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 import supabase from '../db/supabase.js'
 import { verifyToken } from '../middleware/auth.js'
-import { sendVpcConsentEmail } from '../services/email.js'
+import { sendVpcConsentEmail, sendLoginOtpEmail } from '../services/email.js'
+import { sendSmsOtp, verifySmsOtp } from '../services/msg91.js'
+
+// ── In-memory OTP store (login OTPs — short-lived, ephemeral) ────────────────
+// Key: sessionId (uuid), Value: { userId, userObj, otpHash, expiresAt }
+// Max 10 minutes, auto-cleaned.
+const loginOtpStore = new Map()
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, val] of loginOtpStore.entries()) {
+    if (val.expiresAt < now) loginOtpStore.delete(key)
+  }
+}, 5 * 60 * 1000)
+
+function genOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Phone OTP store (in-memory, 10 min TTL)
+// Key: sessionId, Value: { userId, phone, otp, expiresAt }
+const phoneOtpStore = new Map()
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, val] of phoneOtpStore.entries()) {
+    if (val.expiresAt < now) phoneOtpStore.delete(key)
+  }
+}, 5 * 60 * 1000)
 
 const router = express.Router()
 
@@ -30,7 +58,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'name, email, password, role are required' })
     }
 
-    const validRoles = ['student', 'council_member', 'class_teacher', 'coordinator', 'principal', 'supervisor', 'vice_principal', 'director', 'board_member']
+    const validRoles = ['student', 'guardian', 'council_member', 'class_teacher', 'coordinator', 'principal', 'supervisor', 'vice_principal', 'director', 'board_member']
     if (!validRoles.includes(role)) {
       return res.status(400).json({ error: 'Invalid role' })
     }
@@ -70,7 +98,7 @@ router.post('/register', async (req, res) => {
     if (error) throw error
 
     const token = jwt.sign(
-      { id: user.id, name: user.name, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
+      { id: user.id, name: user.name, email: user.email, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
@@ -83,7 +111,7 @@ router.post('/register', async (req, res) => {
   }
 })
 
-// POST /api/auth/login
+// POST /api/auth/login — Step 1: verify credentials → send OTP
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
@@ -102,20 +130,237 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash)
     if (!match) return res.status(401).json({ error: 'Invalid credentials' })
 
+    // ── Generate and store login OTP ─────────────────────────────────────────
+    const otp       = genOtp()
+    const sessionId = randomUUID()
+    const otpHash   = await bcrypt.hash(otp, 8) // fast hash — just needs tampering protection
+
+    const { password_hash, ...safeUser } = user
+
+    loginOtpStore.set(sessionId, {
+      userId:    user.id,
+      userObj:   safeUser,
+      otpHash,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    })
+
+    // ── Send OTP email ────────────────────────────────────────────────────────
+    const smtpConfigured = !!process.env.SMTP_HOST
+    try {
+      await sendLoginOtpEmail(user.email, user.name, otp)
+    } catch (emailErr) {
+      console.error('[OTP] Email send failed:', emailErr.message)
+      // Continue even if email fails — devOtp will show in response
+    }
+
+    const response = {
+      requiresOtp: true,
+      sessionId,
+      maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2'),
+    }
+
+    // In dev (no SMTP) expose OTP so demo still works
+    if (!smtpConfigured) {
+      response.devOtp = otp
+      response.devNote = 'SMTP not configured — OTP shown here for development only'
+    }
+
+    res.json(response)
+  } catch (err) {
+    console.error('Login error:', err)
+    res.status(500).json({ error: 'Login failed' })
+  }
+})
+
+// POST /api/auth/verify-login-otp — Step 2: verify OTP → set auth cookie
+router.post('/verify-login-otp', async (req, res) => {
+  try {
+    const { sessionId, otp } = req.body
+    if (!sessionId || !otp) {
+      return res.status(400).json({ error: 'sessionId and otp are required' })
+    }
+
+    const session = loginOtpStore.get(sessionId)
+    if (!session) {
+      return res.status(401).json({ error: 'Session expired or invalid. Please log in again.' })
+    }
+
+    if (session.expiresAt < Date.now()) {
+      loginOtpStore.delete(sessionId)
+      return res.status(401).json({ error: 'OTP has expired. Please log in again.' })
+    }
+
+    const match = await bcrypt.compare(otp.trim(), session.otpHash)
+    if (!match) {
+      return res.status(401).json({ error: 'Incorrect OTP. Please try again.' })
+    }
+
+    // ── OTP valid — issue JWT cookie ──────────────────────────────────────────
+    loginOtpStore.delete(sessionId) // one-time use
+
+    const u = session.userObj
     const token = jwt.sign(
-      { id: user.id, name: user.name, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
+      { id: u.id, name: u.name, email: u.email, role: u.role, scholar_no: u.scholar_no, section: u.section, house: u.house },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
 
-    // Return all fields except password hash — privacy_acknowledged included so
-    // the frontend gate can block the dashboard immediately if needed
-    const { password_hash, ...safeUser } = user
     setAuthCookie(res, token)
-    res.json({ token, user: safeUser }) // token also in body for dev tooling
+    res.json({ token, user: u })
   } catch (err) {
-    console.error('Login error:', err)
-    res.status(500).json({ error: 'Login failed' })
+    console.error('verify-login-otp error:', err)
+    res.status(500).json({ error: 'OTP verification failed' })
+  }
+})
+
+// POST /api/auth/resend-login-otp — resend OTP for existing session
+router.post('/resend-login-otp', async (req, res) => {
+  try {
+    const { sessionId } = req.body
+    if (!sessionId) return res.status(400).json({ error: 'sessionId required' })
+
+    const session = loginOtpStore.get(sessionId)
+    if (!session) return res.status(401).json({ error: 'Session expired. Please log in again.' })
+
+    // Fetch user email/name from DB
+    const { data: user } = await supabase
+      .from('users').select('email, name').eq('id', session.userId).single()
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    const otp = genOtp()
+    session.otpHash   = await bcrypt.hash(otp, 8)
+    session.expiresAt = Date.now() + 10 * 60 * 1000
+
+    const smtpConfigured = !!process.env.SMTP_HOST
+    try { await sendLoginOtpEmail(user.email, user.name, otp) } catch {}
+
+    const response = { ok: true, maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2') }
+    if (!smtpConfigured) { response.devOtp = otp; response.devNote = 'SMTP not configured' }
+    res.json(response)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to resend OTP' })
+  }
+})
+
+// ── Phone OTP (for phone verification + WhatsApp opt-in) ────────────────────
+
+// POST /api/auth/send-phone-otp — send SMS OTP to provided phone number
+router.post('/send-phone-otp', verifyToken, async (req, res) => {
+  try {
+    const { phone } = req.body
+    if (!phone || !/^[6-9]\d{9}$/.test(phone.replace(/\s/g, ''))) {
+      return res.status(400).json({ error: 'Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' })
+    }
+
+    const phone10 = phone.replace(/\s/g, '')
+    const sessionId = randomUUID()
+
+    // Try to send via MSG91; if not configured, use devOtp fallback
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    let otp
+
+    if (msg91Configured) {
+      const result = await sendSmsOtp(phone10)
+      otp = result.otp
+    } else {
+      otp = genOtp()
+      console.log(`[PhoneOTP-DEV] OTP for 91${phone10}: ${otp}`)
+    }
+
+    phoneOtpStore.set(sessionId, {
+      userId:    req.user.id,
+      phone:     phone10,
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    })
+
+    const response = { ok: true, sessionId, maskedPhone: `***${phone10.slice(-3)}` }
+    if (!msg91Configured) {
+      response.devOtp  = otp
+      response.devNote = 'MSG91 not configured — OTP shown here for development'
+    }
+    res.json(response)
+  } catch (err) {
+    console.error('send-phone-otp error:', err)
+    res.status(500).json({ error: err.message || 'Failed to send OTP' })
+  }
+})
+
+// POST /api/auth/verify-phone-otp — verify OTP and save phone as verified
+router.post('/verify-phone-otp', verifyToken, async (req, res) => {
+  try {
+    const { sessionId, otp, whatsappOptIn } = req.body
+    if (!sessionId || !otp) {
+      return res.status(400).json({ error: 'sessionId and otp are required' })
+    }
+
+    const session = phoneOtpStore.get(sessionId)
+    if (!session) return res.status(401).json({ error: 'Session expired. Please request a new OTP.' })
+    if (session.userId !== req.user.id) return res.status(403).json({ error: 'Session mismatch' })
+    if (session.expiresAt < Date.now()) {
+      phoneOtpStore.delete(sessionId)
+      return res.status(401).json({ error: 'OTP expired. Please request a new one.' })
+    }
+
+    // Verify OTP
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    if (msg91Configured) {
+      // Let MSG91 verify (it tracks internally)
+      try {
+        await verifySmsOtp(session.phone, otp.trim())
+      } catch {
+        return res.status(401).json({ error: 'Incorrect OTP. Please try again.' })
+      }
+    } else {
+      // Dev mode: compare directly
+      if (otp.trim() !== session.otp) {
+        return res.status(401).json({ error: 'Incorrect OTP. Please try again.' })
+      }
+    }
+
+    phoneOtpStore.delete(sessionId)
+
+    // Save verified phone + WhatsApp opt-in to user profile
+    await supabase
+      .from('users')
+      .update({
+        phone:           session.phone,
+        phone_verified:  true,
+        whatsapp_opt_in: !!whatsappOptIn,
+      })
+      .eq('id', req.user.id)
+
+    res.json({
+      ok:              true,
+      phone_verified:  true,
+      whatsapp_opt_in: !!whatsappOptIn,
+      message:         `Phone ${session.phone.slice(0,2)}****${session.phone.slice(-3)} verified successfully.${whatsappOptIn ? ' WhatsApp notifications enabled.' : ''}`,
+    })
+  } catch (err) {
+    console.error('verify-phone-otp error:', err)
+    res.status(500).json({ error: 'Verification failed' })
+  }
+})
+
+// PATCH /api/auth/whatsapp-optin — toggle WhatsApp opt-in without re-verifying phone
+router.patch('/whatsapp-optin', verifyToken, async (req, res) => {
+  try {
+    const { enabled } = req.body
+    const { data: user } = await supabase
+      .from('users').select('phone_verified').eq('id', req.user.id).single()
+
+    if (!user?.phone_verified) {
+      return res.status(400).json({ error: 'Please verify your phone number first.' })
+    }
+
+    await supabase
+      .from('users')
+      .update({ whatsapp_opt_in: !!enabled })
+      .eq('id', req.user.id)
+
+    res.json({ ok: true, whatsapp_opt_in: !!enabled })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update WhatsApp preference' })
   }
 })
 
