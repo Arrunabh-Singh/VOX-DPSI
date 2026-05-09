@@ -401,9 +401,14 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     if (error || !complaint) return res.status(404).json({ error: 'Complaint not found' })
 
-    // Access control
-    if (role === 'student' && complaint.student_id !== userId) {
-      return res.status(403).json({ error: 'Access denied' })
+    // Access control — handle Supabase join which may replace FK with object
+    if (role === 'student') {
+      const actualStudentId = (complaint.student_id && typeof complaint.student_id === 'object')
+        ? (complaint.student_id.id || complaint.student?.id)
+        : complaint.student_id
+      if (actualStudentId !== userId) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
     }
     if (role === 'guardian') {
       const { data: child } = await supabase
@@ -414,19 +419,25 @@ router.get('/:id', verifyToken, async (req, res) => {
         .maybeSingle()
       if (!child) return res.status(403).json({ error: 'Access denied' })
     }
-    if (role === 'council_member' && complaint.assigned_council_member_id !== userId) {
-      // #20 — allow delegate access
-      const today = new Date().toISOString().slice(0, 10)
-      const { data: delegation } = await supabase
-        .from('delegation_rules')
-        .select('id')
-        .eq('delegate_id', userId)
-        .eq('delegator_id', complaint.assigned_council_member_id)
-        .lte('start_date', today)
-        .gte('end_date', today)
-        .limit(1)
-        .maybeSingle()
-      if (!delegation) return res.status(403).json({ error: 'Access denied' })
+    if (role === 'council_member') {
+      const actualAssignedId = (complaint.assigned_council_member_id && typeof complaint.assigned_council_member_id === 'object')
+        ? (complaint.assigned_council_member_id.id || complaint.council_member?.id)
+        : complaint.assigned_council_member_id
+      const isDirectlyAssigned = actualAssignedId && actualAssignedId === userId
+      if (!isDirectlyAssigned) {
+        // #20 — allow delegate access
+        const today = new Date().toISOString().slice(0, 10)
+        const { data: delegation } = await supabase
+          .from('delegation_rules')
+          .select('id')
+          .eq('delegate_id', userId)
+          .eq('delegator_id', actualAssignedId)
+          .lte('start_date', today)
+          .gte('end_date', today)
+          .limit(1)
+          .maybeSingle()
+        if (!delegation) return res.status(403).json({ error: 'Access denied' })
+      }
     }
 
     const result = {
