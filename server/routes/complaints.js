@@ -2488,7 +2488,8 @@ router.post('/:id/skills-assign', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Skills-assignment error:', err)
     res.status(500).json({ error: 'Skills-based assignment failed' })
-  })
+  }
+})
 
 // DELETE /api/complaints/:id — principal/coordinator deletes a complaint
 router.delete('/:id', verifyToken, allowRoles('principal', 'coordinator'), async (req, res) => {
