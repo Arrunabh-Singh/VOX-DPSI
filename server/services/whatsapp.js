@@ -23,9 +23,11 @@ async function getTwilio() {
 const getFrom = () => process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'
 
 async function sendWhatsApp(to, message) {
-  // WHATSAPP_DISABLED — feature incapacitated for demo. Re-enable by removing next line.
-  if (true) return
-  if (!to) return
+   // WHATSAPP_DISABLED — feature incapacitated for demo. Re-enable by removing next line.
+   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+     return // Twilio not configured — silently skip
+   }
+   if (!to) return
   const twilio = await getTwilio()
   if (!twilio) return // env not configured — silently skip
 
