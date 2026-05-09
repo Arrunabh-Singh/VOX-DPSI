@@ -105,38 +105,43 @@ router.post('/', verifyToken, allowRoles('principal', 'coordinator'), async (req
 })
 
 // PATCH /api/users/me — update own profile (house, section, phone, privacy acknowledgement)
-router.patch('/me', verifyToken, async (req, res) => {
-  try {
-    const { house, section, phone, is_privacy_acknowledged } = req.body
-    const allowed = {}
-    if (house)   allowed.house   = house
-    if (section) allowed.section = section
-    if (phone)   allowed.phone   = phone
+ router.patch('/me', verifyToken, async (req, res) => {
+   try {
+     const { house, section, phone, is_privacy_acknowledged, onboarding_completed } = req.body
+     const allowed = {}
+     if (house)   allowed.house   = house
+     if (section) allowed.section = section
+     if (phone)   allowed.phone   = phone
 
-    // DPDP Act 2023 — privacy notice acknowledgement
-    if (is_privacy_acknowledged === true) {
-      allowed.is_privacy_acknowledged  = true
-      allowed.privacy_acknowledged_at  = new Date().toISOString()
-    }
+     // DPDP Act 2023 — privacy notice acknowledgement
+     if (is_privacy_acknowledged === true) {
+       allowed.is_privacy_acknowledged  = true
+       allowed.privacy_acknowledged_at  = new Date().toISOString()
+     }
 
-    if (Object.keys(allowed).length === 0) {
-      return res.status(400).json({ error: 'No updatable fields provided' })
-    }
+     // Council onboarding completion flag
+     if (onboarding_completed === true) {
+       allowed.onboarding_completed = true
+     }
 
-    const { data, error } = await supabase
-      .from('users')
-      .update(allowed)
-      .eq('id', req.user.id)
-      .select('id, name, email, role, scholar_no, section, house, phone, is_privacy_acknowledged, privacy_acknowledged_at')
-      .single()
+     if (Object.keys(allowed).length === 0) {
+       return res.status(400).json({ error: 'No updatable fields provided' })
+     }
 
-    if (error) throw error
-    res.json(data)
-  } catch (err) {
-    console.error('Update profile error:', err)
-    res.status(500).json({ error: 'Failed to update profile' })
-  }
-})
+     const { data, error } = await supabase
+       .from('users')
+       .update(allowed)
+       .eq('id', req.user.id)
+       .select('id, name, email, role, scholar_no, section, house, phone, is_privacy_acknowledged, privacy_acknowledged_at, onboarding_completed')
+       .single()
+
+     if (error) throw error
+     res.json(data)
+   } catch (err) {
+     console.error('Update profile error:', err)
+     res.status(500).json({ error: 'Failed to update profile' })
+   }
+ })
 
 // ── GET /api/users/erasure-requests — coordinator/principal view of all erasure requests (#60) ──
 router.get('/erasure-requests', verifyToken, allowRoles('coordinator', 'principal', 'supervisor', 'vice_principal'), async (req, res) => {

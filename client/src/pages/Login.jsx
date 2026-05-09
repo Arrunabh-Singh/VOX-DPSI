@@ -158,7 +158,7 @@ export default function Login() {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100vh', width: '100%',
       background: `linear-gradient(160deg, #1a2e16 0%, ${NAV} 45%, #1e3f18 100%)`,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
@@ -258,8 +258,9 @@ export default function Login() {
 
             {/* Quick Login */}
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', textAlign: 'center', margin: '0 0 10px 0' }}>
-                Demo Quick Login — password: demo123
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.12em', textAlign: 'center', margin: '0 0 10px 0' }}>
+                <span style={{ textTransform: 'uppercase' }}>Demo Quick Login — password: </span>
+                <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: '700', color: 'rgba(255,255,255,0.8)' }}>demo123</span>
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
                 {demoAccounts.map(acc => (
@@ -303,8 +304,8 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Dev mode banner */}
-            {devOtp && (
+            {/* Dev mode banner — only in dev environment */}
+            {import.meta.env.DEV && devOtp && (
               <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', textAlign: 'center' }}>
                 <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: '700', color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   ⚠️ Dev Mode — SMTP not configured

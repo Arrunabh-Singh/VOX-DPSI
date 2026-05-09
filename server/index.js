@@ -17,6 +17,9 @@ import auditLogRoutes from './routes/auditLog.js'
 import workflowTemplateRoutes from './routes/workflowTemplates.js'
 import resolutionTemplateRoutes from './routes/resolutionTemplates.js'
 import delegationRoutes from './routes/delegations.js'
+import safeDialogueRoutes from './routes/safeDialogue.js'
+import guardianRoutes from './routes/guardian.js'
+import configRoutes from './routes/config.js'
 import { startAutoEscalateCron, startRetentionCron, startTermExpiryCron, startDailyDigestCron } from './jobs/autoEscalate.js'
 
 dotenv.config()
@@ -117,6 +120,9 @@ app.use('/api/audit-log', auditLogRoutes)
 app.use('/api/workflow-templates', workflowTemplateRoutes)
 app.use('/api/resolution-templates', resolutionTemplateRoutes)
 app.use('/api/delegations', delegationRoutes)
+app.use('/api/safe-dialogue', safeDialogueRoutes)
+app.use('/api/guardian', guardianRoutes)
+app.use('/api/config', configRoutes)
 
 // ── WhatsApp test endpoint ────────────────────────────────────────────────────
 app.get('/api/test-whatsapp', async (req, res) => {

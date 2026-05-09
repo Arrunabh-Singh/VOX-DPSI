@@ -160,7 +160,7 @@ router.post('/login', async (req, res) => {
     }
 
     // In dev (no SMTP) expose OTP so demo still works
-    if (!smtpConfigured) {
+    if (!smtpConfigured && process.env.NODE_ENV !== 'production') {
       response.devOtp = otp
       response.devNote = 'SMTP not configured — OTP shown here for development only'
     }
@@ -235,7 +235,7 @@ router.post('/resend-login-otp', async (req, res) => {
     try { await sendLoginOtpEmail(user.email, user.name, otp) } catch {}
 
     const response = { ok: true, maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2') }
-    if (!smtpConfigured) { response.devOtp = otp; response.devNote = 'SMTP not configured' }
+    if (!smtpConfigured && process.env.NODE_ENV !== 'production') { response.devOtp = otp; response.devNote = 'SMTP not configured' }
     res.json(response)
   } catch (err) {
     res.status(500).json({ error: 'Failed to resend OTP' })
@@ -275,7 +275,7 @@ router.post('/send-phone-otp', verifyToken, async (req, res) => {
     })
 
     const response = { ok: true, sessionId, maskedPhone: `***${phone10.slice(-3)}` }
-    if (!msg91Configured) {
+    if (!msg91Configured && process.env.NODE_ENV !== 'production') {
       response.devOtp  = otp
       response.devNote = 'MSG91 not configured — OTP shown here for development'
     }
@@ -365,20 +365,20 @@ router.patch('/whatsapp-optin', verifyToken, async (req, res) => {
 })
 
 // GET /api/auth/me
-router.get('/me', verifyToken, async (req, res) => {
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, name, email, role, scholar_no, section, house, vpc_status, is_privacy_acknowledged, privacy_acknowledged_at, created_at')
-      .eq('id', req.user.id)
-      .single()
+ router.get('/me', verifyToken, async (req, res) => {
+   try {
+     const { data: user, error } = await supabase
+       .from('users')
+        .select('id, name, email, role, scholar_no, section, house, vpc_status, is_privacy_acknowledged, privacy_acknowledged_at, onboarding_completed, created_at')
+       .eq('id', req.user.id)
+       .single()
 
-    if (error || !user) return res.status(404).json({ error: 'User not found' })
-    res.json(user)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch user' })
-  }
-})
+     if (error || !user) return res.status(404).json({ error: 'User not found' })
+     res.json(user)
+   } catch (err) {
+     res.status(500).json({ error: 'Failed to fetch user' })
+   }
+ })
 
 // POST /api/auth/logout — clear HttpOnly cookie (#51)
 router.post('/logout', (req, res) => {

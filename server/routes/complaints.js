@@ -289,15 +289,27 @@ router.get('/', verifyToken, async (req, res) => {
 
     if (role === 'student') {
       query = query.eq('student_id', userId)
-    } else if (role === 'guardian') {
-      // #63 — Guardian sees complaints linked to their children via vpc_parent_email
-      const { data: children } = await supabase
-        .from('users')
-        .select('id')
-        .eq('vpc_parent_email', req.user.email)
-      const childIds = (children || []).map(c => c.id)
-      query = query.in('student_id', childIds)
-    } else if (role === 'council_member') {
+     } else if (role === 'guardian') {
+       // #63 — Guardian sees complaints for the linked student via guardian_student_id (direct FK)
+       // If guardian_student_id is not set, fallback to legacy vpc_parent_email linkage
+       const { data: userRec } = await supabase
+         .from('users')
+         .select('guardian_student_id')
+         .eq('id', userId)
+         .single()
+       const childIds = []
+       if (userRec?.guardian_student_id) {
+         childIds.push(userRec.guardian_student_id)
+       } else {
+         // Legacy fallback: find students whose vpc_parent_email matches this user's email
+         const { data: children } = await supabase
+           .from('users')
+           .select('id')
+           .eq('vpc_parent_email', req.user.email)
+         childIds.push(...(children || []).map(c => c.id))
+       }
+       query = query.in('student_id', childIds)
+     } else if (role === 'council_member') {
       // #20 — Also include complaints delegated to this council member today
       const today = new Date().toISOString().slice(0, 10)
       const { data: activeDelegations } = await supabase
@@ -323,6 +335,11 @@ router.get('/', verifyToken, async (req, res) => {
     // supervisor/principal/director/board_member who can see them in a dedicated view
     if (!['supervisor', 'principal', 'vice_principal', 'director', 'board_member'].includes(role)) {
       query = query.neq('is_hidden', true)
+    }
+
+    // Exclude deleted complaints unless include_deleted=true is passed by privileged roles
+    if (req.query.include_deleted !== 'true') {
+      query = query.neq('status', 'deleted')
     }
 
     const { data: complaints, error } = await query
@@ -2471,6 +2488,74 @@ router.post('/:id/skills-assign', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Skills-assignment error:', err)
     res.status(500).json({ error: 'Skills-based assignment failed' })
+  })
+
+// DELETE /api/complaints/:id — principal/coordinator deletes a complaint
+router.delete('/:id', verifyToken, allowRoles('principal', 'coordinator'), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { role, id: userId } = req.user
+
+    // Verify complaint exists
+    const { data: complaint, error: fetchErr } = await supabase
+      .from('complaints')
+      .select('id, complaint_no, domain, description')
+      .eq('id', id)
+      .single()
+    if (fetchErr || !complaint) {
+      return res.status(404).json({ error: 'Complaint not found' })
+    }
+
+    // Delete related records first (FK constraints)
+    // 1. Timeline entries
+    const { error: tlErr } = await supabase
+      .from('complaint_timeline')
+      .delete()
+      .eq('complaint_id', id)
+    if (tlErr) throw tlErr
+
+    // 2. Notifications related to this complaint
+    const { error: notifErr } = await supabase
+      .from('notifications')
+      .delete()
+      .like('link', `%/complaints/${id}%`)
+    if (notifErr) throw notifErr
+
+    // 3. Escalations
+    const { error: escErr } = await supabase
+      .from('escalations')
+      .delete()
+      .eq('complaint_id', id)
+    if (escErr) throw escErr
+
+    // 4. Internal notes
+    const { error: notesErr } = await supabase
+      .from('internal_notes')
+      .delete()
+      .eq('complaint_id', id)
+    if (notesErr) throw notesErr
+
+    // 5. Complaint access log
+    const { error: logErr } = await supabase
+      .from('complaint_access_log')
+      .delete()
+      .eq('complaint_id', id)
+    if (logErr) throw logErr
+
+    // 6. Finally, delete the complaint
+    const { error: delErr } = await supabase
+      .from('complaints')
+      .delete()
+      .eq('id', id)
+    if (delErr) throw delErr
+
+    // Log the deletion in audit (via timeline of another complaint or system log)
+    console.log(`Complaint ${complaint.complaint_no} deleted by ${role} ${userId}`)
+
+    res.json({ ok: true, message: 'Complaint deleted successfully' })
+  } catch (err) {
+    console.error('Delete complaint error:', err)
+    res.status(500).json({ error: 'Failed to delete complaint' })
   }
 })
 
