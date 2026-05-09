@@ -1,0 +1,38 @@
+=== PATCH ===
+
+[Schema Patch] Adding identity_revealed column...
+  ✗ pg-meta not accessible (404)
+
+  ⚠  Manual step needed: run this SQL in Supabase dashboard:
+  https://supabase.com/dashboard/project/gznhziptmydkalsrazpj/sql
+
+  ALTER TABLE complaints
+    ADD COLUMN IF NOT EXISTS identity_revealed BOOLEAN DEFAULT false;
+
+  SELECT pg_notify('pgrst', 'reload schema');
+
+=== SEED ===
+
+[1/5] Clearing existing seed data...
+  ✓ Cleared escalations
+  ✓ Cleared complaint_timeline
+  ✓ Cleared complaints
+  ✓ Cleared users
+
+[2/5] Inserting users...
+  ✓ 7 users inserted
+
+[3/5] Inserting sample complaints...
+  ✓ 4 sample complaints inserted
+
+[4/5] Inserting timeline entries...
+  ✓ 12 timeline entries inserted
+
+[5/5] Inserting escalation records...
+  ✓ 2 escalation records inserted
+
+============================================
+  ✅  Seed complete! Database is ready.
+============================================
+
+=== EXIT 0 ===

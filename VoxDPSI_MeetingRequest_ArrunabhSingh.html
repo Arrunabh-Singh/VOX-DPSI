@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vox DPSI — Meeting Request · Arrunabh Singh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: #111;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+
+  /* ── A4 Canvas ───────────────────────────────────── */
+  .page {
+    width: 794px;          /* 210mm at 96dpi */
+    min-height: 1123px;    /* 297mm at 96dpi */
+    background: linear-gradient(160deg, #1A2E16 0%, #2D5C26 45%, #1E3F18 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Decorative circles */
+  .deco-circle-tr {
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(201,168,76,0.06);
+    pointer-events: none;
+  }
+  .deco-circle-bl {
+    position: absolute;
+    bottom: -60px; left: -60px;
+    width: 230px; height: 230px;
+    border-radius: 50%;
+    background: rgba(234,225,196,0.04);
+    pointer-events: none;
+  }
+
+  /* ── Section 1: Header strip ─────────────────────── */
+  .header-strip {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(201,168,76,0.22);
+    padding: 9px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .header-strip .hs-left {
+    font-size: 9.5px; font-weight: 600;
+    color: rgba(255,255,255,0.65);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .header-strip .hs-center {
+    font-size: 9.5px; font-weight: 700;
+    color: #C9A84C;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .header-strip .hs-right {
+    font-size: 9.5px; font-weight: 500;
+    color: rgba(255,255,255,0.45);
+  }
+
+  /* ── Content wrapper ─────────────────────────────── */
+  .content {
+    padding: 18px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Section 2: Hero ─────────────────────────────── */
+  .hero {
+    text-align: center;
+    padding-bottom: 14px;
+  }
+  .hero-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+  .hero-wordmark {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #FFFFFF;
+  }
+  .hero-wordmark .dpsi { color: #C9920A; }
+  .hero-tagline {
+    font-size: 11.5px;
+    font-style: italic;
+    color: rgba(255,255,255,0.52);
+    margin-bottom: 9px;
+    letter-spacing: 0.02em;
+  }
+  .hero-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .hero-divider-line {
+    height: 1px;
+    width: 120px;
+    background: rgba(201,168,76,0.4);
+  }
+  .hero-divider-text {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: rgba(201,168,76,0.7);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* ── Section gap ─────────────────────────────────── */
+  .gap-sm { height: 10px; flex-shrink: 0; }
+  .gap-md { height: 13px; flex-shrink: 0; }
+
+  /* ── Section 3: Two-column ───────────────────────── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .col-card {
+    border-radius: 14px;
+    padding: 13px 15px;
+  }
+  .col-card.problem {
+    background: rgba(0,0,0,0.20);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .col-card.inspiration {
+    background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+  }
+  .col-dot {
+    width: 6px; height: 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .col-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .col-body {
+    font-size: 10.5px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.62;
+  }
+
+  /* ── Section 4: Product description ─────────────── */
+  .product-desc {
+    background: rgba(45,92,38,0.35);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 14px;
+    padding: 13px 17px;
+    flex-shrink: 0;
+  }
+  .product-desc p {
+    font-size: 11px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.65;
+    text-align: left;
+  }
+  .product-desc p strong {
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+  .complaint-no {
+    font-family: ui-monospace, 'Consolas', monospace;
+    font-weight: 700;
+    font-size: 10.5px;
+    color: #C9A84C;
+  }
+
+  /* ── Section 5: Flow diagram ─────────────────────── */
+  .flow-section { flex-shrink: 0; }
+  .section-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(201,168,76,0.7);
+    margin-bottom: 8px;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    position: relative;
+  }
+  .flow-node-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-node {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 7px 10px;
+    width: 96px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .flow-node .fn-icon { font-size: 13px; line-height: 1; margin-bottom: 2px; }
+  .flow-node .fn-name {
+    font-size: 8.5px; font-weight: 700; color: #FFFFFF;
+    line-height: 1.2;
+  }
+  .flow-node .fn-sub {
+    font-size: 7.5px; color: rgba(255,255,255,0.5);
+    line-height: 1.3; margin-top: 1px;
+  }
+  .flow-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 28px;
+  }
+  .flow-arrow-line {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    line-height: 1;
+    margin-top: -1px;
+  }
+  .flow-arrow-label {
+    font-size: 6.5px;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .flow-sla-note {
+    text-align: center;
+    font-size: 7.5px;
+    color: rgba(255,255,255,0.38);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+  /* Special: VOX-O6 sits elevated */
+  .flow-node.vox06 {
+    border-left: 3px solid #C9A84C;
+    background: rgba(201,168,76,0.08);
+    border-color: rgba(201,168,76,0.35);
+    border-left-color: #C9A84C;
+  }
+  .flow-node.council  { border-left: 3px solid #16A34A; }
+  .flow-node.teacher  { border-left: 3px solid #EA580C; }
+  .flow-node.coord    { border-left: 3px solid #D97706; }
+  .flow-node.principal-node { border-left: 3px solid #DC2626; }
+
+  /* ── Section 6: Features grid ────────────────────── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    flex-shrink: 0;
+  }
+  .feat-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: 10px 11px;
+  }
+  .feat-icon { font-size: 16px; line-height: 1; margin-bottom: 4px; }
+  .feat-title {
+    font-size: 10.5px; font-weight: 700; color: #FFFFFF;
+    margin-bottom: 3px; line-height: 1.3;
+  }
+  .feat-desc {
+    font-size: 8.5px; font-weight: 400;
+    color: rgba(255,255,255,0.62);
+    line-height: 1.55;
+  }
+
+  /* ── Section 7: Stats bar ────────────────────────── */
+  .stats-bar {
+    background: rgba(201,168,76,0.10);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 12px;
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-shrink: 0;
+  }
+  .stat-block { text-align: center; flex: 1; }
+  .stat-num {
+    font-size: 26px; font-weight: 900;
+    color: #C9A84C;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 8px; font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 3px;
+  }
+  .stat-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(201,168,76,0.25);
+    flex-shrink: 0;
+  }
+
+  /* ── Section 8: Screenshots ──────────────────────── */
+  .screenshots-row {
+    display: flex;
+    gap: 9px;
+    flex-shrink: 0;
+  }
+  .screenshot-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .screenshot-frame {
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    overflow: hidden;
+    height: 110px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .screenshot-caption {
+    font-size: 7.5px;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* App mockup components */
+  .mock-nav {
+    background: #2D5C26;
+    border-bottom: 1px solid rgba(201,168,76,0.22);
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mock-nav-logo {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .mock-nav-logo span { color: #C9920A; }
+  .mock-body {
+    background: #EAE1C4;
+    padding: 7px 8px;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100% - 26px);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .mock-card {
+    background: #fff;
+    border: 1px solid rgba(45,92,38,0.12);
+    border-radius: 7px;
+    padding: 5px 7px;
+    box-shadow: 0 1px 4px rgba(45,92,38,0.06);
+  }
+  .mock-pill {
+    display: inline-block;
+    font-size: 6px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 999px;
+  }
+  .mock-label {
+    font-size: 6.5px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .mock-value {
+    font-size: 7.5px;
+    color: #1a1a1a;
+    font-weight: 600;
+    margin-top: 1px;
+  }
+  .mock-mono {
+    font-family: ui-monospace, monospace;
+    font-size: 7px;
+    font-weight: 700;
+    color: #2D5C26;
+  }
+
+  /* ── Section 9: Footer ───────────────────────────── */
+  .footer {
+    background: rgba(0,0,0,0.25);
+    border-top: 1px solid rgba(201,168,76,0.22);
+    padding: 10px 28px 12px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .footer-name {
+    font-size: 10.5px; font-weight: 600; color: #FFFFFF;
+    margin-bottom: 5px;
+  }
+  .footer-request {
+    display: inline-block;
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.30);
+    border-radius: 9999px;
+    padding: 3px 13px;
+    font-size: 9.5px;
+    font-style: italic;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 5px;
+  }
+  .footer-contact {
+    font-size: 9.5px; font-weight: 500;
+    color: rgba(255,255,255,0.50);
+  }
+  .footer-contact .gold-url { color: #C9A84C; font-weight: 600; }
+
+  /* ── Print styles ────────────────────────────────── */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      padding: 0;
+      background: none;
+    }
+    body {
+      display: block;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      page-break-after: always;
+      break-after: page;
+      overflow: visible;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Decorative background circles -->
+  <div class="deco-circle-tr"></div>
+  <div class="deco-circle-bl"></div>
+
+  <!-- ── SECTION 1: Header Strip ────────────────────── -->
+  <div class="header-strip">
+    <span class="hs-left">Delhi Public School Indore</span>
+    <span class="hs-center">vox-dpsi.vercel.app</span>
+    <span class="hs-right">1 May 2026</span>
+  </div>
+
+  <!-- ── Content ─────────────────────────────────────── -->
+  <div class="content">
+
+    <!-- ── SECTION 2: Hero ─────────────────────────── -->
+    <div class="hero">
+      <div class="hero-logo">
+        <!-- VoxMark Shield SVG — exact path data from VoxLogo.jsx -->
+        <svg width="38" height="42" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2L37 8.5V23C37 34 29 41.5 20 43.5C11 41.5 3 34 3 23V8.5L20 2Z" fill="#1B4D2B"/>
+          <path d="M20 5.5L34 11V23C34 32.5 27.5 39.5 20 41C12.5 39.5 6 32.5 6 23V11L20 5.5Z" fill="#163D22"/>
+          <rect x="16.5" y="12" width="7" height="10" rx="3.5" fill="#C9920A"/>
+          <rect x="18" y="13.5" width="2.5" height="3" rx="1.25" fill="rgba(255,255,255,0.25)"/>
+          <path d="M13.5 22.5C13.5 27 26.5 27 26.5 22.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <line x1="20" y1="27" x2="20" y2="30.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="16.5" y1="30.5" x2="23.5" y2="30.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div class="hero-wordmark">VOX <span class="dpsi">DPSI</span></div>
+      </div>
+      <p class="hero-tagline">The Voice of Delhi Public School Indore</p>
+      <div class="hero-divider">
+        <div class="hero-divider-line"></div>
+        <span class="hero-divider-text">Student Grievance Management System</span>
+        <div class="hero-divider-line"></div>
+      </div>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 3: Two-column ──────────────────── -->
+    <div class="two-col">
+      <div class="col-card problem">
+        <div class="col-header">
+          <div class="col-dot" style="background:#DC2626;"></div>
+          <span class="col-title" style="color:#FFFFFF;">The Problem</span>
+        </div>
+        <p class="col-body">At DPS Indore, student concerns disappear into verbal loops — passed from person to person with no record, no accountability, and no resolution timeline. Students stay silent because there is no safe, structured way to be heard.</p>
+      </div>
+      <div class="col-card inspiration">
+        <div class="col-header">
+          <div class="col-dot" style="background:#C9A84C;"></div>
+          <span class="col-title" style="color:#C9A84C;">The Inspiration</span>
+        </div>
+        <p class="col-body">Inspired by Indore's award-winning 311 civic grievance system — India's model for transparent public accountability — Vox DPSI brings the same principle inside school walls: every concern gets a tracking number, a handler, and a timeline.</p>
+      </div>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 4: Product Description ────────── -->
+    <div class="product-desc">
+      <p><strong>Vox DPSI</strong> is a full-stack student grievance management platform built by the Student Council of Delhi Public School Indore. Students raise complaints with a unique tracking number (<span class="complaint-no">VOX-001</span> format), which are assigned to council members, escalated through teachers and coordinators with complete audit trails, and resolved with SLA timers enforcing accountability at every step. Anonymity controls, WhatsApp notifications, and an appeals system ensure both safety and fairness.</p>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 5: How It Works ────────────────── -->
+    <div class="flow-section">
+      <div class="section-label">How It Works</div>
+      <div class="flow-row">
+
+        <div class="flow-node-wrap">
+          <div class="flow-node">
+            <div class="fn-icon">📱</div>
+            <div class="fn-name">Student</div>
+            <div class="fn-sub">Raises complaint</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow" style="align-items:center;">
+          <div class="flow-arrow-line" style="line-height:1;">→</div>
+        </div>
+
+        <div class="flow-node-wrap">
+          <div class="flow-node council">
+            <div class="fn-icon">🏛️</div>
+            <div class="fn-name">Council</div>
+            <div class="fn-sub">Assigns &amp; verifies</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <div class="flow-arrow-line">→</div>
+        </div>
+
+        <div class="flow-node-wrap">
+          <div class="flow-node teacher">
+            <div class="fn-icon">👩‍🏫</div>
+            <div class="fn-name">Teacher</div>
+            <div class="fn-sub">Class escalation</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <div class="flow-arrow-line">→</div>
+        </div>
+
+        <div class="flow-node-wrap">
+          <div class="flow-node coord">
+            <div class="fn-icon">📋</div>
+            <div class="fn-name">Coordinator</div>
+            <div class="fn-sub">Dept. review</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <div class="flow-arrow-line">→</div>
+        </div>
+
+        <div class="flow-node-wrap">
+          <div class="flow-node principal-node">
+            <div class="fn-icon">🎓</div>
+            <div class="fn-name">Principal</div>
+            <div class="fn-sub">Final authority</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <div class="flow-arrow-line">→</div>
+        </div>
+
+        <div class="flow-node-wrap">
+          <div class="flow-node vox06">
+            <div class="fn-icon">👑</div>
+            <div class="fn-name">VOX-O6</div>
+            <div class="fn-sub">Oversees all</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="flow-sla-note">SLA timers enforce accountability at each step</div>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 6: Key Features ────────────────── -->
+    <div>
+      <div class="section-label">Key Features</div>
+      <div class="features-grid">
+
+        <div class="feat-card" style="border-top: 2px solid #7C3AED;">
+          <div class="feat-icon">🔒</div>
+          <div class="feat-title">Anonymity Control</div>
+          <div class="feat-desc">Students request anonymity. Council always sees the name. Identity revealed to teachers and coordinators only with explicit consent — logged in the audit trail.</div>
+        </div>
+
+        <div class="feat-card" style="border-top: 2px solid #D97706;">
+          <div class="feat-icon">⏱️</div>
+          <div class="feat-title">SLA Timers</div>
+          <div class="feat-desc">Every complaint has a 48-hour resolution window. On Track → Due Soon → Act Now → OVERDUE — visible to all handlers in real time.</div>
+        </div>
+
+        <div class="feat-card" style="border-top: 2px solid #2D5C26;">
+          <div class="feat-icon">📊</div>
+          <div class="feat-title">Analytics Dashboard</div>
+          <div class="feat-desc">Domain breakdowns, section heatmaps, resolution rates, council performance scores, and 7-day complaint volume timeline — all in one view.</div>
+        </div>
+
+        <div class="feat-card" style="border-top: 2px solid #16A34A;">
+          <div class="feat-icon">💬</div>
+          <div class="feat-title">WhatsApp Notifications</div>
+          <div class="feat-desc">Instant WhatsApp alerts via Twilio when complaints are assigned, escalated, or resolved. No one can claim they did not know.</div>
+        </div>
+
+        <div class="feat-card" style="border-top: 2px solid #2563EB;">
+          <div class="feat-icon">✅</div>
+          <div class="feat-title">In-Person Verification</div>
+          <div class="feat-desc">Council members must mark complaints Verified after meeting the student face-to-face. No digital shortcuts — accountability built into the workflow.</div>
+        </div>
+
+        <div class="feat-card" style="border-top: 2px solid #C9A84C;">
+          <div class="feat-icon">📜</div>
+          <div class="feat-title">Full Audit Trail</div>
+          <div class="feat-desc">Every action — escalation, vote, note, status change — is timestamped and logged in a tamper-evident timeline. Complete institutional memory.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 7: Stats Bar ───────────────────── -->
+    <div class="stats-bar">
+      <div class="stat-block">
+        <div class="stat-num">3 wks</div>
+        <div class="stat-label">Built in spare time</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-block">
+        <div class="stat-num">6</div>
+        <div class="stat-label">Roles — Student → VOX-O6</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-block">
+        <div class="stat-num">48h</div>
+        <div class="stat-label">SLA resolution window</div>
+      </div>
+    </div>
+
+    <div class="gap-sm"></div>
+
+    <!-- ── SECTION 8: Live Application Mockups ────── -->
+    <div>
+      <div class="section-label">Live Application</div>
+      <div class="screenshots-row">
+
+        <!-- Mockup 1: Login page -->
+        <div class="screenshot-block">
+          <div class="screenshot-frame" style="background: linear-gradient(160deg, #1A2E16 0%, #2D5C26 55%, #1E3F18 100%);">
+            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; gap:6px;">
+              <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+                <svg width="18" height="20" viewBox="0 0 40 44" fill="none"><path d="M20 2L37 8.5V23C37 34 29 41.5 20 43.5C11 41.5 3 34 3 23V8.5L20 2Z" fill="#1B4D2B"/><path d="M20 5.5L34 11V23C34 32.5 27.5 39.5 20 41C12.5 39.5 6 32.5 6 23V11L20 5.5Z" fill="#163D22"/><rect x="16.5" y="12" width="7" height="10" rx="3.5" fill="#C9920A"/><rect x="18" y="13.5" width="2.5" height="3" rx="1.25" fill="rgba(255,255,255,0.25)"/><path d="M13.5 22.5C13.5 27 26.5 27 26.5 22.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round" fill="none"/><line x1="20" y1="27" x2="20" y2="30.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="30.5" x2="23.5" y2="30.5" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <span style="font-family:'Outfit',sans-serif;font-weight:800;font-size:14px;color:#fff;letter-spacing:-0.02em;">VOX <span style="color:#C9920A;">DPSI</span></span>
+              </div>
+              <p style="font-size:7px;color:rgba(255,255,255,0.5);font-style:italic;margin-bottom:3px;">The Voice of Delhi Public School Indore</p>
+              <div style="width:82%;background:#EAE1C4;border-radius:9px;padding:8px 9px;box-shadow:0 6px 20px rgba(0,0,0,0.25);border:1px solid rgba(201,168,76,0.2);">
+                <p style="font-size:7px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">Sign in to your account</p>
+                <div style="background:#fff;border:1px solid rgba(45,92,38,0.25);border-radius:5px;padding:3px 5px;margin-bottom:3px;">
+                  <span style="font-size:6px;color:#999;">Email address</span>
+                </div>
+                <div style="background:#fff;border:1px solid rgba(45,92,38,0.25);border-radius:5px;padding:3px 5px;margin-bottom:4px;">
+                  <span style="font-size:6px;color:#999;">Password</span>
+                </div>
+                <div style="background:#2D5C26;border-radius:5px;padding:3px;text-align:center;">
+                  <span style="font-size:6.5px;font-weight:700;color:#fff;">Sign In →</span>
+                </div>
+              </div>
+              <div style="width:82%;background:rgba(255,255,255,0.08);border-radius:7px;padding:4px 6px;border:1px solid rgba(255,255,255,0.1);">
+                <p style="font-size:5.5px;color:rgba(255,255,255,0.45);text-align:center;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Demo Quick Login</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;">
+                  <div style="background:rgba(255,255,255,0.07);border-left:2px solid #2563EB;border-radius:3px;padding:2px 4px;"><span style="font-size:6px;font-weight:600;color:#fff;">Student</span></div>
+                  <div style="background:rgba(255,255,255,0.07);border-left:2px solid #16A34A;border-radius:3px;padding:2px 4px;"><span style="font-size:6px;font-weight:600;color:#fff;">Council</span></div>
+                  <div style="background:rgba(255,255,255,0.07);border-left:2px solid #7C3AED;border-radius:3px;padding:2px 4px;"><span style="font-size:6px;font-weight:600;color:#fff;">Teacher</span></div>
+                  <div style="background:rgba(255,255,255,0.07);border-left:2px solid #C9A84C;border-radius:3px;padding:2px 4px;"><span style="font-size:6px;font-weight:600;color:#fff;">Principal</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-caption">Login — 6 roles, demo accounts</div>
+        </div>
+
+        <!-- Mockup 2: Principal Dashboard -->
+        <div class="screenshot-block">
+          <div class="screenshot-frame">
+            <div class="mock-nav">
+              <span class="mock-nav-logo">VOX <span>DPSI</span></span>
+              <span style="font-size:7px;color:rgba(255,255,255,0.6);">Mr. Parminder Chopra · <span style="color:#C9A84C;">Principal</span></span>
+            </div>
+            <div class="mock-body">
+              <!-- Tab row -->
+              <div style="display:flex;gap:4px;margin-bottom:1px;">
+                <div style="background:#2D5C26;border-radius:5px;padding:2px 6px;"><span style="font-size:6px;font-weight:700;color:#fff;">Complaints</span></div>
+                <div style="background:rgba(255,255,255,0.5);border-radius:5px;padding:2px 6px;"><span style="font-size:6px;color:#6B7280;">Analytics</span></div>
+              </div>
+              <!-- Complaint cards -->
+              <div class="mock-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+                  <span class="mock-mono">VOX-014</span>
+                  <span class="mock-pill" style="background:#FEE2E2;color:#DC2626;">Escalated → Principal</span>
+                </div>
+                <span class="mock-pill" style="background:#EFF6FF;color:#2563EB;margin-bottom:2px;display:inline-block;">📚 Academics</span>
+                <p style="font-size:6.5px;color:#374151;line-height:1.4;">Student reports unfair marking in Class XII B quarterly examination.</p>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;">
+                  <span style="font-size:5.5px;color:#9CA3AF;">Raised 2h ago</span>
+                  <span class="mock-pill" style="background:#FFEDD5;color:#EA580C;">Act Now</span>
+                </div>
+              </div>
+              <div class="mock-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+                  <span class="mock-mono">VOX-011</span>
+                  <span class="mock-pill" style="background:#EEF2FF;color:#4F46E5;">In Progress</span>
+                </div>
+                <span class="mock-pill" style="background:#FEF2F2;color:#DC2626;margin-bottom:2px;display:inline-block;">🛡️ Safety</span>
+                <p style="font-size:6.5px;color:#374151;line-height:1.4;">Broken railing on staircase B, third floor — safety concern flagged.</p>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;">
+                  <span style="font-size:5.5px;color:#9CA3AF;">Raised 1d ago</span>
+                  <span class="mock-pill" style="background:#FEF3C7;color:#D97706;">Due Soon</span>
+                </div>
+              </div>
+              <div class="mock-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+                  <span class="mock-mono">VOX-009</span>
+                  <span class="mock-pill" style="background:#DCFCE7;color:#16A34A;">Resolved</span>
+                </div>
+                <span class="mock-pill" style="background:#FFF7ED;color:#EA580C;margin-bottom:2px;display:inline-block;">🏗️ Infrastructure</span>
+                <p style="font-size:6.5px;color:#374151;line-height:1.4;">Water cooler on second floor non-functional for 3 days.</p>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-caption">Principal Dashboard — full system view</div>
+        </div>
+
+        <!-- Mockup 3: Analytics -->
+        <div class="screenshot-block">
+          <div class="screenshot-frame">
+            <div class="mock-nav">
+              <span class="mock-nav-logo">VOX <span>DPSI</span></span>
+              <span style="font-size:7px;color:rgba(255,255,255,0.6);">Analytics</span>
+            </div>
+            <div class="mock-body">
+              <!-- Stats row -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-bottom:3px;">
+                <div class="mock-card" style="text-align:center;padding:4px 3px;">
+                  <div style="font-size:13px;font-weight:900;color:#2D5C26;">24</div>
+                  <div style="font-size:5.5px;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">Total</div>
+                </div>
+                <div class="mock-card" style="text-align:center;padding:4px 3px;">
+                  <div style="font-size:13px;font-weight:900;color:#16A34A;">18</div>
+                  <div style="font-size:5.5px;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">Resolved</div>
+                </div>
+                <div class="mock-card" style="text-align:center;padding:4px 3px;">
+                  <div style="font-size:13px;font-weight:900;color:#D97706;">6</div>
+                  <div style="font-size:5.5px;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">Open</div>
+                </div>
+              </div>
+              <!-- Domain breakdown -->
+              <div class="mock-card" style="margin-bottom:3px;">
+                <p style="font-size:6px;font-weight:700;color:#1a1a1a;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em;">Domain Breakdown</p>
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <div style="display:flex;align-items:center;gap:3px;">
+                    <div style="width:40%;background:#EFF6FF;border-radius:2px;height:6px;position:relative;"><div style="width:70%;background:#2563EB;height:100%;border-radius:2px;"></div></div>
+                    <span style="font-size:6px;color:#374151;">📚 Academics 35%</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:3px;">
+                    <div style="width:40%;background:#FFF7ED;border-radius:2px;height:6px;position:relative;"><div style="width:50%;background:#EA580C;height:100%;border-radius:2px;"></div></div>
+                    <span style="font-size:6px;color:#374151;">🏗️ Infra 25%</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:3px;">
+                    <div style="width:40%;background:#FEF2F2;border-radius:2px;height:6px;position:relative;"><div style="width:30%;background:#DC2626;height:100%;border-radius:2px;"></div></div>
+                    <span style="font-size:6px;color:#374151;">🛡️ Safety 15%</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:3px;">
+                    <div style="width:40%;background:#FFFBEB;border-radius:2px;height:6px;position:relative;"><div style="width:20%;background:#D97706;height:100%;border-radius:2px;"></div></div>
+                    <span style="font-size:6px;color:#374151;">⚠️ Behaviour 10%</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Council scores -->
+              <div class="mock-card">
+                <p style="font-size:6px;font-weight:700;color:#1a1a1a;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.06em;">Council Performance</p>
+                <div style="display:flex;flex-direction:column;gap:1.5px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:6px;color:#374151;">Priya Verma</span>
+                    <span style="font-size:6px;font-weight:700;color:#16A34A;">98%</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:6px;color:#374151;">Rahul Sharma</span>
+                    <span style="font-size:6px;font-weight:700;color:#D97706;">84%</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:6px;color:#374151;">Ananya Rao</span>
+                    <span style="font-size:6px;font-weight:700;color:#2D5C26;">91%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-caption">Analytics — domain breakdown + council scores</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 8px;"></div>
+
+  </div><!-- /content -->
+
+  <!-- ── SECTION 9: Footer ───────────────────────────── -->
+  <div class="footer">
+    <div class="footer-name">Arrunabh Singh &nbsp;·&nbsp; Class XII B &nbsp;·&nbsp; Scholar No. 5411 &nbsp;·&nbsp; House Prithvi &nbsp;·&nbsp; DPS Indore</div>
+    <div style="display:flex; justify-content:center; margin-bottom:5px;">
+      <span class="footer-request">Requesting 15 minutes of your time to demonstrate this live, sir.</span>
+    </div>
+    <div class="footer-contact">
+      arrunabh.s@gmail.com &nbsp;·&nbsp; <span class="gold-url">vox-dpsi.vercel.app</span>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+
+<script>
+  document.fonts.ready.then(function() {
+    setTimeout(function() { window.print(); }, 500);
+  });
+</script>
+</body>
+</html>
