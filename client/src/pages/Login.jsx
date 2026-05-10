@@ -116,6 +116,14 @@ export default function Login() {
     e.preventDefault()
   }
 
+  const resetToStep1 = () => {
+    setStep(1)
+    setOtp(['', '', '', '', '', ''])
+    setDevOtp('')
+    setSessionId('')
+    setMaskedEmail('')
+  }
+
   const submitOtp = async (otpStr) => {
     const code = otpStr || otp.join('')
     if (code.length !== 6) return toast.error('Enter all 6 digits')
@@ -127,10 +135,21 @@ export default function Login() {
       if (loginWithCookie) await loginWithCookie()
       navigate('/')
     } catch (err) {
-      const msg = err.response?.data?.error || 'Incorrect OTP'
-      toast.error(msg)
-      setOtp(['', '', '', '', '', ''])
-      otpRefs.current[0]?.focus()
+      const status = err.response?.status
+      const body   = err.response?.data || {}
+
+      if (status === 429) {
+        // Session killed — too many wrong attempts or resend limit
+        toast.error(body.error || 'Too many attempts. Please log in again.')
+        resetToStep1()
+      } else {
+        toast.error(body.error || 'Incorrect OTP')
+        if (body.attemptsRemaining !== undefined) {
+          toast(`${body.attemptsRemaining} attempt${body.attemptsRemaining !== 1 ? 's' : ''} remaining`, { icon: '⚠️' })
+        }
+        setOtp(['', '', '', '', '', ''])
+        otpRefs.current[0]?.focus()
+      }
     } finally {
       setOtpLoading(false)
     }
@@ -148,8 +167,10 @@ export default function Login() {
       setOtp(['', '', '', '', '', ''])
       otpRefs.current[0]?.focus()
     } catch (err) {
-      toast.error('Failed to resend OTP. Please log in again.')
-      setStep(1)
+      const status = err.response?.status
+      const body   = err.response?.data || {}
+      toast.error(body.error || 'Failed to resend OTP. Please log in again.')
+      if (status === 429 || status === 401) resetToStep1()
     } finally {
       setResending(false)
     }

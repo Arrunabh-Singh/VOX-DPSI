@@ -1,15 +1,17 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { randomUUID } from 'crypto'
+import { randomUUID, randomInt } from 'crypto'
 import supabase from '../db/supabase.js'
 import { verifyToken } from '../middleware/auth.js'
 import { sendVpcConsentEmail, sendLoginOtpEmail } from '../services/email.js'
 import { sendSmsOtp, verifySmsOtp } from '../services/msg91.js'
 
 // ── In-memory OTP store (login OTPs — short-lived, ephemeral) ────────────────
-// Key: sessionId (uuid), Value: { userId, userObj, otpHash, expiresAt }
-// Max 10 minutes, auto-cleaned.
+// Key: sessionId (uuid)
+// Value: { userId, userObj, otpHash, expiresAt, attempts, resendCount }
+//   attempts   — wrong OTP guesses so far (max 5 before session is killed)
+//   resendCount — how many times OTP has been regenerated (max 3)
 const loginOtpStore = new Map()
 
 // Cleanup expired entries every 5 minutes
@@ -20,8 +22,9 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000)
 
+// Use crypto.randomInt — cryptographically secure, unlike Math.random()
 function genOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
 // Phone OTP store (in-memory, 10 min TTL)
@@ -138,10 +141,12 @@ router.post('/login', async (req, res) => {
     const { password_hash, ...safeUser } = user
 
     loginOtpStore.set(sessionId, {
-      userId:    user.id,
-      userObj:   safeUser,
+      userId:      user.id,
+      userObj:     safeUser,
       otpHash,
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      expiresAt:   Date.now() + 10 * 60 * 1000, // 10 minutes
+      attempts:    0,   // wrong OTP guesses — session killed at 5
+      resendCount: 0,   // regenerations — capped at 3
     })
 
     // ── Send OTP email ────────────────────────────────────────────────────────
@@ -150,7 +155,14 @@ router.post('/login', async (req, res) => {
       await sendLoginOtpEmail(user.email, user.name, otp)
     } catch (emailErr) {
       console.error('[OTP] Email send failed:', emailErr.message)
-      // Continue even if email fails — devOtp will show in response
+      // Clean up the orphaned session so the user isn't stranded
+      loginOtpStore.delete(sessionId)
+      // In production, failing to deliver the OTP must be surfaced — never silently continue
+      if (smtpConfigured) {
+        return res.status(500).json({
+          error: 'Could not send the verification email. Please try again in a moment.',
+        })
+      }
     }
 
     const response = {
@@ -190,9 +202,24 @@ router.post('/verify-login-otp', async (req, res) => {
       return res.status(401).json({ error: 'OTP has expired. Please log in again.' })
     }
 
+    // ── Attempt limit: kill session after 5 wrong guesses ────────────────────
+    session.attempts++
+    if (session.attempts > 5) {
+      loginOtpStore.delete(sessionId)
+      return res.status(429).json({ error: 'Too many incorrect attempts. Please log in again.' })
+    }
+
     const match = await bcrypt.compare(otp.trim(), session.otpHash)
     if (!match) {
-      return res.status(401).json({ error: 'Incorrect OTP. Please try again.' })
+      const remaining = 5 - session.attempts
+      if (remaining === 0) {
+        loginOtpStore.delete(sessionId)
+        return res.status(429).json({ error: 'Too many incorrect attempts. Please log in again.' })
+      }
+      return res.status(401).json({
+        error: 'Incorrect OTP. Please try again.',
+        attemptsRemaining: remaining,
+      })
     }
 
     // ── OTP valid — issue JWT cookie ──────────────────────────────────────────
@@ -222,6 +249,13 @@ router.post('/resend-login-otp', async (req, res) => {
     const session = loginOtpStore.get(sessionId)
     if (!session) return res.status(401).json({ error: 'Session expired. Please log in again.' })
 
+    // ── Server-side resend cap: max 3 resends per session ────────────────────
+    session.resendCount++
+    if (session.resendCount > 3) {
+      loginOtpStore.delete(sessionId)
+      return res.status(429).json({ error: 'Maximum resend limit reached. Please log in again.' })
+    }
+
     // Fetch user email/name from DB
     const { data: user } = await supabase
       .from('users').select('email, name').eq('id', session.userId).single()
@@ -230,6 +264,7 @@ router.post('/resend-login-otp', async (req, res) => {
     const otp = genOtp()
     session.otpHash   = await bcrypt.hash(otp, 8)
     session.expiresAt = Date.now() + 10 * 60 * 1000
+    session.attempts  = 0 // reset attempt count on fresh OTP
 
     const smtpConfigured = !!process.env.SMTP_HOST
     try { await sendLoginOtpEmail(user.email, user.name, otp) } catch {}

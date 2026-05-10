@@ -11,7 +11,12 @@
 
 import nodemailer from 'nodemailer'
 
-const FROM_ADDR = process.env.EMAIL_FROM || '"Vox DPSI" <noreply@dpsi.edu.in>'
+// Use SMTP_FROM or EMAIL_FROM env var; fall back to the authenticated SMTP account
+// so Gmail doesn't reject the send due to mismatched From address.
+const FROM_ADDR =
+  process.env.SMTP_FROM ||
+  process.env.EMAIL_FROM ||
+  (process.env.SMTP_USER ? `"Vox DPSI" <${process.env.SMTP_USER}>` : '"Vox DPSI" <noreply@dpsi.edu.in>')
 
 function makeTransport() {
   if (!process.env.SMTP_HOST) {
@@ -32,6 +37,16 @@ function makeTransport() {
 }
 
 const transporter = makeTransport()
+
+// Verify SMTP connection at startup so misconfiguration shows up in Railway logs immediately
+if (process.env.SMTP_HOST) {
+  transporter.verify().then(() => {
+    console.log('[Email] SMTP connection verified — ready to send')
+  }).catch(err => {
+    console.error('[Email] SMTP connection FAILED — OTP emails will not deliver:', err.message)
+    console.error('[Email] Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS in Railway env vars')
+  })
+}
 
 /**
  * Send the Verifiable Parental Consent email to a parent/guardian.
