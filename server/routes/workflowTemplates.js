@@ -5,7 +5,7 @@ import { verifyToken } from '../middleware/auth.js'
 const router = express.Router()
 
 const CAN_READ  = ['council_member','class_teacher','coordinator','principal','supervisor','vice_principal','director','board_member']
-const CAN_WRITE = ['coordinator','principal','supervisor','vice_principal','director','board_member']
+const CAN_WRITE = ['principal','supervisor','vice_principal']
 
 // GET /api/workflow-templates — list all templates
 router.get('/', verifyToken, async (req, res) => {

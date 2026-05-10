@@ -41,6 +41,8 @@ function DelegationModal({ councilMembers, currentUserId, isAdmin, onClose, onCr
     if (!delegateId)     return toast.error('Select a delegate')
     if (!endDate)        return toast.error('Set an end date')
     if (startDate > endDate) return toast.error('End date must be after start date')
+    const diffDays = (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)
+    if (diffDays > 30) return toast.error('Delegation cannot exceed 1 month')
     setSaving(true)
     try {
       const payload = { delegate_id: delegateId, start_date: startDate, end_date: endDate, reason }
@@ -118,6 +120,7 @@ function DelegationModal({ councilMembers, currentUserId, isAdmin, onClose, onCr
                 type="date"
                 value={endDate}
                 min={startDate}
+                max={startDate ? new Date(new Date(startDate).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : ''}
                 onChange={e => setEndDate(e.target.value)}
                 className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
                 style={{ border: '1.5px solid rgba(45,92,38,0.2)', background: '#fff' }}

@@ -11,7 +11,6 @@ const demoAccounts = [
   { label: 'Teacher',     name: 'Mrs. Sharma',           email: 'teacher@dpsi.com',           color: '#7C3AED' },
   { label: 'Coordinator', name: 'Mr. Kapil',             email: 'coordinator@dpsi.com',       color: '#EA580C' },
   { label: 'Principal',   name: 'Mr. Parminder Chopra',  email: 'principal@dpsi.com',         color: '#c9a84c' },
-  { label: 'Supervisor',  name: 'Arrunabh Singh',        email: 'supervisor@dpsi.com',        color: '#2d5c26' },
 ]
 
 const NAV  = '#2d5c26'

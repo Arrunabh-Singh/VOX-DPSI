@@ -248,7 +248,7 @@ export default function PrincipalDashboard() {
 
         {/* Tab nav — scrolls horizontally on mobile */}
         <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {[['complaints', '📋 Complaints'], ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', '📊 Analytics'], ['erasure', '🗑️ Erasure Requests'], ['audit', '🔍 Audit Log'], ['workflows', '⚙️ Workflows'], ['rules', '🎯 Assignment Rules'], ['team', '👥 Council Tenure']].map(([tab, label]) => (
+          {[['complaints', '📋 Complaints'], ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', '📊 Analytics'], ['erasure', '🗑️ Erasure Requests'], ['workflows', '⚙️ Workflows'], ['rules', '🎯 Assignment Rules']].map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -327,10 +327,8 @@ export default function PrincipalDashboard() {
           <AnalyticsDashboard complaints={complaints} />
         )}
         {activeTab === 'erasure' && <ErasureRequestsPanel />}
-        {activeTab === 'audit' && <AuditLogViewer />}
         {activeTab === 'workflows' && <WorkflowTemplatesPanelWithAuth canWrite={false} />}
         {activeTab === 'rules' && <AssignmentRulesPanel />}
-        {activeTab === 'team' && <TermLimitPanel />}
       </main>
       <Footer />
     </div>

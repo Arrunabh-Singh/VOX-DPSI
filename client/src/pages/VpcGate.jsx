@@ -423,6 +423,8 @@ export default function VpcGate({ children }) {
               </button>
             </form>
           )}
+          {activeTab === 'email' && (!sentStatus || ['expired','declined'].includes(vpcStatus)) && (
+            <form onSubmit={handleSubmit}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
                 Parent / Guardian Email Address
               </label>

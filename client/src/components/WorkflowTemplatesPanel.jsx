@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../utils/api'
 import { DOMAINS } from '../utils/constants'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
 const ROLE_LABELS = {
   council_member:  'Council Member',
@@ -303,10 +304,9 @@ export default function WorkflowTemplatesPanel() {
   const [templates, setTemplates] = useState([])
   const [loading, setLoading]     = useState(true)
   const [editing, setEditing]     = useState(null)
-  const { user } = (typeof window !== 'undefined') ? { user: null } : {}
+  const { user } = useAuth()
+  const canWrite = ['principal','supervisor','vice_principal'].includes(user?.role)
 
-  // Check if current user can write (read from context via prop or hook)
-  // We'll receive canWrite as a prop from the parent
   useEffect(() => {
     api.get('/api/workflow-templates')
       .then(r => setTemplates(r.data || []))
@@ -319,7 +319,6 @@ export default function WorkflowTemplatesPanel() {
     setEditing(null)
   }
 
-  // canWrite prop passed by parent, or default based on auth context
   return (
     <WorkflowTemplatesPanelInner
       templates={templates}
@@ -327,6 +326,7 @@ export default function WorkflowTemplatesPanel() {
       editing={editing}
       setEditing={setEditing}
       handleSaved={handleSaved}
+      canWrite={canWrite}
     />
   )
 }

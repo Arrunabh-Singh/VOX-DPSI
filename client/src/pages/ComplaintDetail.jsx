@@ -837,8 +837,7 @@ import ResolutionSuggestions from '../components/ResolutionSuggestions'
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold" style={{ color: '#2d5c26' }}>Activity Timeline</h3>
-                {/* Print Report — visible to all staff at any stage */}
-                {!isStudent && (
+                {['coordinator','principal','vice_principal','supervisor'].includes(user?.role) && (
                   <button
                     onClick={printReport}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

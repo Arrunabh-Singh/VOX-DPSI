@@ -53,6 +53,11 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'start_date must be on or before end_date' })
     }
 
+    const diffDays = (new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24)
+    if (diffDays > 30) {
+      return res.status(400).json({ error: 'Delegation period cannot exceed 1 month' })
+    }
+
     // Determine effective delegator
     let effectiveDelegatorId
     if (ALLOWED_ADMIN_ROLES.includes(user.role)) {
