@@ -26,8 +26,12 @@ const devTransporter = nodemailer.createTransport({ jsonTransport: true })
 // Unified send function — Resend in prod, console log in dev
 async function sendMail({ to, subject, html, text }) {
   if (USE_RESEND) {
-    const { error } = await resend.emails.send({ from: FROM_ADDR, to, subject, html, text })
-    if (error) throw new Error(error.message)
+    const { data, error } = await resend.emails.send({ from: FROM_ADDR, to, subject, html, text })
+    if (error) {
+      console.error('[Email:Resend] Send failed:', JSON.stringify(error))
+      throw new Error(error.message)
+    }
+    console.log(`[Email:Resend] Sent OK → id: ${data?.id} | to: ${to}`)
     return
   }
   // Dev fallback
