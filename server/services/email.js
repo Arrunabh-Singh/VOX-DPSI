@@ -1,63 +1,57 @@
 /**
- * Email service
+ * Email service — Resend HTTP API
  *
- * Production (Railway): set BREVO_API_KEY — uses Brevo HTTP API (port 443, never blocked)
- *   Free tier: 300 emails/day to ANY address, no domain ownership required.
- *   Setup: sign up at brevo.com → Settings → API Keys → Generate
- *          Then: Senders & IP → Senders → add & verify arrunabh.s@gmail.com
- *          Set BREVO_SENDER_EMAIL=arrunabh.s@gmail.com in Railway env vars.
+ * All emails are delivered to RESEND_OVERRIDE_TO (your address).
+ * The original recipient is shown in the subject line for identification.
+ * Resend free tier only sends to the account owner's email — this works around that.
  *
- * Local dev: no env vars needed — OTP logged to console.
- *
- * Why not Gmail SMTP? Railway blocks outbound SMTP ports (25/465/587).
- * Why not Resend? Free tier only sends to your own email without a verified domain.
+ * Railway env vars needed:
+ *   RESEND_API_KEY       = re_xxxx   (from resend.com → API Keys)
+ *   RESEND_OVERRIDE_TO   = arrunabh.s@gmail.com
  */
 
+import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 
-const BREVO_API_KEY    = process.env.BREVO_API_KEY
-const USE_BREVO        = !!BREVO_API_KEY
-const SENDER_EMAIL     = process.env.BREVO_SENDER_EMAIL || 'arrunabh.s@gmail.com'
-const SENDER_NAME      = 'Vox DPSI'
+const USE_RESEND    = !!process.env.RESEND_API_KEY
+const resend        = USE_RESEND ? new Resend(process.env.RESEND_API_KEY) : null
+const OVERRIDE_TO   = process.env.RESEND_OVERRIDE_TO || 'arrunabh.s@gmail.com'
+const FROM_ADDR     = 'Vox DPSI <onboarding@resend.dev>'
 
 // Dev-only nodemailer null transport (logs to console, no real sending)
 const devTransporter = nodemailer.createTransport({ jsonTransport: true })
 
 async function sendMail({ to, subject, html, text }) {
-  if (USE_BREVO) {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method:  'POST',
-      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
-        to:          [{ email: to }],
-        subject,
-        htmlContent: html,
-        textContent: text,
-      }),
+  if (USE_RESEND) {
+    // All mail goes to OVERRIDE_TO; prefix subject with original recipient
+    const deliverTo      = OVERRIDE_TO
+    const taggedSubject  = `[→ ${to}] ${subject}`
+    const { data, error } = await resend.emails.send({
+      from:    FROM_ADDR,
+      to:      deliverTo,
+      subject: taggedSubject,
+      html,
+      text,
     })
-    const body = await res.json()
-    if (!res.ok) {
-      console.error('[Email:Brevo] Send failed:', JSON.stringify(body))
-      throw new Error(body.message || 'Brevo send failed')
+    if (error) {
+      console.error('[Email:Resend] Send failed:', JSON.stringify(error))
+      throw new Error(error.message)
     }
-    console.log(`[Email:Brevo] Sent OK → messageId: ${body.messageId} | to: ${to}`)
+    console.log(`[Email:Resend] Sent OK → id: ${data?.id} | intended: ${to} | delivered: ${deliverTo}`)
     return
   }
   // Dev fallback — log to console
-  const info = await devTransporter.sendMail({
-    from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`, to, subject, html, text,
-  })
+  const info = await devTransporter.sendMail({ from: FROM_ADDR, to, subject, html, text })
   if (info.message) {
     const parsed = JSON.parse(info.message)
     console.log(`[Email:DEV] To: ${to} | Subject: ${parsed.subject}`)
   }
 }
 
-if (USE_BREVO) {
-  console.log(`[Email] Using Brevo API — sender: ${SENDER_EMAIL}`)
+if (USE_RESEND) {
+  console.log(`[Email] Using Resend — all mail redirected to ${OVERRIDE_TO}`)
 } else {
-  console.log('[Email] No BREVO_API_KEY — emails logged to console only (dev mode)')
+  console.log('[Email] No RESEND_API_KEY — emails logged to console only (dev mode)')
 }
 
 /**
