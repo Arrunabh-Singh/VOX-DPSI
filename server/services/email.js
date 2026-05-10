@@ -1,54 +1,47 @@
 /**
- * Email service — nodemailer with SMTP (#59)
- * Required env vars:
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
- *   EMAIL_FROM  (default: noreply@dpsi.edu.in)
- *   CLIENT_URL  (for building consent links)
+ * Email service
  *
- * In development (SMTP_HOST not set) we log email content to console
- * so the flow can be tested without a real SMTP server.
+ * Production (Railway): set RESEND_API_KEY — uses Resend HTTP API (never blocked by firewalls)
+ * Local dev:            no env vars needed — logs email content to console
+ *
+ * Railway blocks outbound SMTP ports (25/465/587), so nodemailer+Gmail will
+ * always time out there. Resend sends over HTTPS (port 443) which is always open.
+ *
+ * Sign up free at https://resend.com → API Keys → create key → add to Railway as RESEND_API_KEY
+ * From address: use "Vox DPSI <onboarding@resend.dev>" until you verify your own domain.
  */
 
+import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 
-// Use SMTP_FROM or EMAIL_FROM env var; fall back to the authenticated SMTP account
-// so Gmail doesn't reject the send due to mismatched From address.
-const FROM_ADDR =
-  process.env.SMTP_FROM ||
-  process.env.EMAIL_FROM ||
-  (process.env.SMTP_USER ? `"Vox DPSI" <${process.env.SMTP_USER}>` : '"Vox DPSI" <noreply@dpsi.edu.in>')
+const USE_RESEND = !!process.env.RESEND_API_KEY
+const resend     = USE_RESEND ? new Resend(process.env.RESEND_API_KEY) : null
 
-function makeTransport() {
-  if (!process.env.SMTP_HOST) {
-    // Dev fallback — ethereal-style null transport (logs to console)
-    return nodemailer.createTransport({
-      jsonTransport: true, // writes to info.message JSON — we log it
-    })
+// From address: prefer RESEND_FROM env var, else Resend sandbox address (no domain needed)
+const FROM_ADDR = process.env.RESEND_FROM || 'Vox DPSI <onboarding@resend.dev>'
+
+// Dev-only nodemailer null transport (logs to console, no real sending)
+const devTransporter = nodemailer.createTransport({ jsonTransport: true })
+
+// Unified send function — Resend in prod, console log in dev
+async function sendMail({ to, subject, html, text }) {
+  if (USE_RESEND) {
+    const { error } = await resend.emails.send({ from: FROM_ADDR, to, subject, html, text })
+    if (error) throw new Error(error.message)
+    return
   }
-  return nodemailer.createTransport({
-    host:              process.env.SMTP_HOST,
-    port:              parseInt(process.env.SMTP_PORT || '587', 10),
-    secure:            process.env.SMTP_PORT === '465',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    connectionTimeout: 8000,  // fail fast if SMTP unreachable (ms)
-    greetingTimeout:   8000,
-    socketTimeout:     10000,
-  })
+  // Dev fallback
+  const info = await devTransporter.sendMail({ from: FROM_ADDR, to, subject, html, text })
+  if (info.message) {
+    const parsed = JSON.parse(info.message)
+    console.log(`[Email:DEV] To: ${to} | Subject: ${parsed.subject}`)
+  }
 }
 
-const transporter = makeTransport()
-
-// Verify SMTP connection at startup so misconfiguration shows up in Railway logs immediately
-if (process.env.SMTP_HOST) {
-  transporter.verify().then(() => {
-    console.log('[Email] SMTP connection verified — ready to send')
-  }).catch(err => {
-    console.error('[Email] SMTP connection FAILED — OTP emails will not deliver:', err.message)
-    console.error('[Email] Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS in Railway env vars')
-  })
+if (USE_RESEND) {
+  console.log('[Email] Using Resend API — HTTP-based, Railway-compatible')
+} else {
+  console.log('[Email] No RESEND_API_KEY — emails will be logged to console only (dev mode)')
 }
 
 /**
@@ -128,22 +121,12 @@ export async function sendVpcConsentEmail(parentEmail, studentName, token) {
 </body>
 </html>`
 
-  const info = await transporter.sendMail({
-    from:    FROM_ADDR,
+  await sendMail({
     to:      parentEmail,
     subject: `[Vox DPSI] Parental Consent Required — ${studentName}`,
     html,
     text: `Parental consent is required for ${studentName} to use Vox DPSI.\n\nGrant consent: ${grantUrl}\nDecline: ${declineUrl}\n\nThis link expires in 72 hours.`,
   })
-
-  // In dev (jsonTransport) log the email to console for testing
-  if (process.env.NODE_ENV !== 'production' && info.message) {
-    const parsed = JSON.parse(info.message)
-    console.log('[Email:VPC] Would send to:', parentEmail)
-    console.log('[Email:VPC] Grant URL:', grantUrl)
-    console.log('[Email:VPC] Decline URL:', declineUrl)
-    console.log('[Email:VPC] Subject:', parsed.subject)
-  }
 
   return { grantUrl, declineUrl }
 }
@@ -217,19 +200,12 @@ export async function sendStatusChangeEmail(studentEmail, studentName, complaint
 </body>
 </html>`
 
-  const info = await transporter.sendMail({
-    from: FROM_ADDR,
-    to: studentEmail,
+  await sendMail({
+    to:      studentEmail,
     subject: `[Vox DPSI] ${complaintNo} — ${label}`,
     html,
     text: `Hi ${studentName},\n\nYour complaint ${complaintNo} has been updated: ${label}\n${note ? '\nNote: ' + note + '\n' : ''}\nView it at: ${clientBase}\n`,
   })
-
-  if (process.env.NODE_ENV !== 'production' && info.message) {
-    const parsed = JSON.parse(info.message)
-    console.log(`[Email:Status] Would send to: ${studentEmail}`)
-    console.log(`[Email:Status] Subject: ${parsed.subject}`)
-  }
 }
 
 // ── Daily Digest Email (#28) ──────────────────────────────────────────────────
@@ -385,17 +361,12 @@ export async function sendDailyDigestEmail(toEmail, toName, role, complaints) {
 </body>
 </html>`
 
-  const info = await transporter.sendMail({
-    from:    FROM_ADDR,
+  await sendMail({
     to:      toEmail,
     subject: `[Vox DPSI] Morning Digest — ${complaints.length} open complaint${complaints.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
     html,
     text: `Good morning ${toName},\n\nYour Vox DPSI morning digest (${dateStr}):\n\nSLA Breached: ${breached.length}\nDue Soon: ${approaching.length}\nOn Track: ${normal.length}\nTotal Open: ${complaints.length}\n\nOpen your dashboard: ${clientBase}\n`,
   })
-
-  if (process.env.NODE_ENV !== 'production' && info.message) {
-    console.log(`[Email:Digest] Would send to: ${toEmail} — ${complaints.length} complaints`)
-  }
 }
 
 // ── Login OTP Email (#91) ────────────────────────────────────────────────────
@@ -405,8 +376,7 @@ export async function sendDailyDigestEmail(toEmail, toName, role, complaints) {
  * Valid for 10 minutes.
  */
 export async function sendLoginOtpEmail(toEmail, toName, otp) {
-  const info = await transporter.sendMail({
-    from:    FROM_ADDR,
+  await sendMail({
     to:      toEmail,
     subject: `${otp} — Your Vox DPSI login code`,
     html: `
@@ -435,9 +405,4 @@ export async function sendLoginOtpEmail(toEmail, toName, otp) {
 </body></html>`,
     text: `Hi ${toName},\n\nYour Vox DPSI login code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`,
   })
-
-  if (!process.env.SMTP_HOST) {
-    console.log(`[Email:OTP] SMTP not configured — OTP for ${toEmail}: ${otp}`)
-  }
-  return info
 }
