@@ -60,6 +60,7 @@ export default function RaiseComplaint() {
   const [duplicateWarning, setDuplicateWarning] = useState(null) // { existing: [...] }
   const [house, setHouse]                     = useState(draft?.house || user?.house || '')
   const [draftRestored, setDraftRestored]     = useState(!!draft && !!draft.description)
+  const [domainError, setDomainError]         = useState(false)
 
   // Fetch workflow template when domain changes (#8)
   useEffect(() => {
@@ -138,7 +139,13 @@ export default function RaiseComplaint() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!domain) return toast.error('Please select a domain')
+    if (!domain) {
+      setDomainError(true)
+      toast.error('Please select a category for your complaint')
+      document.querySelector('[data-section="domain"]')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setDomainError(false)
     if (description.length < 50) return toast.error('Description must be at least 50 characters')
     if (isSuspiciousDescription(description)) {
       setSpamWarning(true)
@@ -267,13 +274,18 @@ export default function RaiseComplaint() {
               What area does this relate to? <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-400 mb-3">Pick the closest match — you can explain the details below.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div
+              data-section="domain"
+              className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+              style={{ border: domainError ? '2px solid #DC2626' : '2px solid transparent', borderRadius: 12, padding: 4 }}
+            >
               {Object.entries(DOMAINS).map(([key, d]) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => {
                     setDomain(key)
+                    setDomainError(false)
                     setSuggestedDomain(null)
                   }}
                   className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold"

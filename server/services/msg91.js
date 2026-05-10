@@ -164,12 +164,53 @@ export async function sendWhatsAppStatusUpdate(phone10digit, complaintNo, newSta
 }
 
 /**
+ * Send an SMS status update to a phone number via MSG91.
+ * Template variables for complaint_status_sms:
+ *   1 = complaint_no (e.g. VOX-042)
+ *   2 = new_status   (e.g. "Escalated to Coordinator")
+ *   3 = handler_name (e.g. "Mr. Kapil")
+ *
+ * NOTE: SMS messages are only sent when:
+ *   - MSG91_SMS_STATUS_TEMPLATE_ID is set (template approved)
+ *   - recipient has phone_verified = true (we check this at the API level)
+ */
+export async function sendComplaintStatusSms(phone10digit, complaintNo, newStatus, handlerName) {
+   const SMS_TMPL = process.env.MSG91_SMS_STATUS_TEMPLATE_ID
+   if (!AUTH_KEY || !SMS_TMPL) {
+     console.log(`[SMS-SKIP] Not configured — would send to 91${phone10digit}: ${complaintNo} → ${newStatus}`)
+     return { sent: false, reason: 'not_configured' }
+   }
+
+   try {
+     const payload = {
+       sender_id: SENDER_ID,
+       template_id: SMS_TMPL,
+       recipents: [
+         {
+           mobile: mobile(phone10digit),
+           var1: complaintNo,
+           var2: newStatus,
+           var3: handlerName || 'the assigned handler'
+         }
+       ]
+     }
+
+     const result = await msg91Request('/api/v2/sendcampaign/', payload)
+     console.log(`[SMS] Status sent to 91${phone10digit}:`, result)
+     return { sent: true, result }
+   } catch (err) {
+     console.error('[MSG91] SMS send error:', err.message)
+     return { sent: false, reason: err.message }
+   }
+ }
+
+/**
  * Check if MSG91 is configured (used by health endpoint).
  */
 export function msg91Status() {
-  return {
-    sms_configured:       !!AUTH_KEY && !!OTP_TMPL,
-    whatsapp_configured:  !!AUTH_KEY && !!WA_TMPL,
-    auth_key_present:     !!AUTH_KEY,
-  }
-}
+   return {
+     sms_configured:       !!AUTH_KEY && !!OTP_TMPL,
+     whatsapp_configured:  !!AUTH_KEY && !!WA_TMPL,
+     auth_key_present:     !!AUTH_KEY,
+   }
+ }

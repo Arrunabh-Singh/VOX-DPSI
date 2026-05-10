@@ -13,6 +13,7 @@ import ErasureRequestsPanel from '../components/ErasureRequestsPanel'
 import AuditLogViewer from '../components/AuditLogViewer'
 import { WorkflowTemplatesPanelWithAuth } from '../components/WorkflowTemplatesPanel'
 import TermLimitPanel from '../components/TermLimitPanel'
+import AssignmentRulesPanel from '../components/AssignmentRulesPanel'
 
 function AppealsPanel({ appeals, loading, onReviewed }) {
   const [reviewing, setReviewing] = useState(null) // appealId being reviewed
@@ -247,7 +248,7 @@ export default function PrincipalDashboard() {
 
         {/* Tab nav — scrolls horizontally on mobile */}
         <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {[['complaints', '📋 Complaints'], ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', '📊 Analytics'], ['erasure', '🗑️ Erasure Requests'], ['audit', '🔍 Audit Log'], ['workflows', '⚙️ Workflows'], ['team', '👥 Council Tenure']].map(([tab, label]) => (
+          {[['complaints', '📋 Complaints'], ['appeals', `📩 Appeals${appeals.length > 0 ? ` (${appeals.filter(a=>a.status==='pending').length})` : ''}`], ['analytics', '📊 Analytics'], ['erasure', '🗑️ Erasure Requests'], ['audit', '🔍 Audit Log'], ['workflows', '⚙️ Workflows'], ['rules', '🎯 Assignment Rules'], ['team', '👥 Council Tenure']].map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -328,6 +329,7 @@ export default function PrincipalDashboard() {
         {activeTab === 'erasure' && <ErasureRequestsPanel />}
         {activeTab === 'audit' && <AuditLogViewer />}
         {activeTab === 'workflows' && <WorkflowTemplatesPanelWithAuth canWrite={false} />}
+        {activeTab === 'rules' && <AssignmentRulesPanel />}
         {activeTab === 'team' && <TermLimitPanel />}
       </main>
       <Footer />

@@ -7,6 +7,7 @@ import {
   notifyAdminAlert,
 } from './whatsapp.js'
 import { sendStatusChangeEmail } from './email.js'
+import { sendComplaintStatusSms } from './msg91.js'
 
 // Admin/supervisor number that gets WhatsApp for EVERY key event
 const ADMIN_WA = process.env.ADMIN_WHATSAPP_NUMBER || null
@@ -65,9 +66,13 @@ export async function notifyStatusChange(studentId, complaintNo, oldStatus, newS
     complaintId
   )
 
-  // WhatsApp — student's own number
-  const studentPhone = await getUserPhone(studentId)
-  if (studentPhone) notifyComplaintUpdate(studentPhone, complaintNo, newStatus).catch(() => {})
+   // WhatsApp — student's own number
+   const studentPhone = await getUserPhone(studentId)
+   if (studentPhone) {
+     notifyComplaintUpdate(studentPhone, complaintNo, newStatus).catch(() => {})
+     // SMS — student's own number (non-blocking)
+     sendComplaintStatusSms(studentPhone, complaintNo, newStatus, 'the assigned handler').catch(() => {})
+   }
 
   // WhatsApp — admin always gets notified
   if (ADMIN_WA) {

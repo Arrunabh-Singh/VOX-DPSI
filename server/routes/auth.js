@@ -133,6 +133,18 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash)
     if (!match) return res.status(401).json({ error: 'Invalid credentials' })
 
+    // ── SKIP_OTP bypass — set in Railway env to disable OTP for demo/dev ─────
+    if (process.env.SKIP_OTP === 'true') {
+      const { password_hash: _ph, ...safeUser } = user
+      const token = jwt.sign(
+        { id: user.id, name: user.name, email: user.email, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+      setAuthCookie(res, token)
+      return res.json({ user: safeUser })
+    }
+
     // ── Generate and store login OTP ─────────────────────────────────────────
     const otp       = genOtp()
     const sessionId = randomUUID()
@@ -155,9 +167,7 @@ router.post('/login', async (req, res) => {
       await sendLoginOtpEmail(user.email, user.name, otp)
     } catch (emailErr) {
       console.error('[OTP] Email send failed:', emailErr.message)
-      // Clean up the orphaned session so the user isn't stranded
-      loginOtpStore.delete(sessionId)
-      // In production, failing to deliver the OTP must be surfaced — never silently continue
+      loginOtpStore.delete(sessionId) // clean up orphaned session
       if (smtpConfigured) {
         return res.status(500).json({
           error: 'Could not send the verification email. Please try again in a moment.',
@@ -172,7 +182,7 @@ router.post('/login', async (req, res) => {
     }
 
     // In dev (no SMTP) expose OTP so demo still works
-    if (!smtpConfigured) {
+    if (!smtpConfigured && process.env.NODE_ENV !== 'production') {
       response.devOtp = otp
       response.devNote = 'SMTP not configured — OTP shown here for development only'
     }
@@ -270,7 +280,7 @@ router.post('/resend-login-otp', async (req, res) => {
     try { await sendLoginOtpEmail(user.email, user.name, otp) } catch {}
 
     const response = { ok: true, maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2') }
-    if (!smtpConfigured) { response.devOtp = otp; response.devNote = 'SMTP not configured' }
+    if (!smtpConfigured && process.env.NODE_ENV !== 'production') { response.devOtp = otp; response.devNote = 'SMTP not configured' }
     res.json(response)
   } catch (err) {
     res.status(500).json({ error: 'Failed to resend OTP' })
@@ -310,7 +320,7 @@ router.post('/send-phone-otp', verifyToken, async (req, res) => {
     })
 
     const response = { ok: true, sessionId, maskedPhone: `***${phone10.slice(-3)}` }
-    if (!msg91Configured) {
+    if (!msg91Configured && process.env.NODE_ENV !== 'production') {
       response.devOtp  = otp
       response.devNote = 'MSG91 not configured — OTP shown here for development'
     }
@@ -400,20 +410,20 @@ router.patch('/whatsapp-optin', verifyToken, async (req, res) => {
 })
 
 // GET /api/auth/me
-router.get('/me', verifyToken, async (req, res) => {
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, name, email, role, scholar_no, section, house, vpc_status, is_privacy_acknowledged, privacy_acknowledged_at, created_at')
-      .eq('id', req.user.id)
-      .single()
+ router.get('/me', verifyToken, async (req, res) => {
+   try {
+     const { data: user, error } = await supabase
+       .from('users')
+        .select('id, name, email, role, scholar_no, section, house, vpc_status, is_privacy_acknowledged, privacy_acknowledged_at, onboarding_completed, created_at')
+       .eq('id', req.user.id)
+       .single()
 
-    if (error || !user) return res.status(404).json({ error: 'User not found' })
-    res.json(user)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch user' })
-  }
-})
+     if (error || !user) return res.status(404).json({ error: 'User not found' })
+     res.json(user)
+   } catch (err) {
+     res.status(500).json({ error: 'Failed to fetch user' })
+   }
+ })
 
 // POST /api/auth/logout — clear HttpOnly cookie (#51)
 router.post('/logout', (req, res) => {
@@ -557,6 +567,106 @@ router.get('/vpc-status', verifyToken, async (req, res) => {
     })
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch VPC status' })
+  }
+})
+
+// ── OTP-Based VPC Verification (B3 Task #80) ────────────────────────────────
+
+// POST /api/auth/vpc-otp-request — send OTP to parent's phone for VPC verification
+router.post('/vpc-otp-request', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students need VPC verification' })
+    }
+
+    const { phone } = req.body
+    if (!phone || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ error: 'Valid 10-digit phone number required' })
+    }
+
+    // Check if MSG91 is configured
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    let otp
+
+    if (msg91Configured) {
+      const result = await sendSmsOtp(phone)
+      otp = result.otp
+    } else {
+      otp = Math.floor(100000 + Math.random() * 900000).toString()
+      console.log(`[VPC-SMS-DEV] OTP for 91${phone}: ${otp}`)
+    }
+
+    // Store OTP in phoneOtpStore for later verification
+    const sessionId = randomUUID()
+    phoneOtpStore.set(sessionId, {
+      userId: req.user.id,
+      phone,
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    })
+
+    const response = { ok: true, sessionId, maskedPhone: `***${phone.slice(-3)}` }
+    if (!msg91Configured && process.env.NODE_ENV !== 'production') {
+      response.devOtp = otp
+      response.devNote = 'MSG91 not configured — OTP shown here for development'
+    }
+    res.json(response)
+  } catch (err) {
+    console.error('VPC OTP request error:', err)
+    res.status(500).json({ error: err.message || 'Failed to send OTP' })
+  }
+})
+
+// POST /api/auth/vpc-otp-verify — verify OTP and grant VPC
+router.post('/vpc-otp-verify', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students need VPC verification' })
+    }
+
+    const { sessionId, otp } = req.body
+    if (!sessionId || !otp) {
+      return res.status(400).json({ error: 'sessionId and otp are required' })
+    }
+
+    const session = phoneOtpStore.get(sessionId)
+    if (!session) {
+      return res.status(401).json({ error: 'Session expired or invalid' })
+    }
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Session mismatch' })
+    }
+    if (session.expiresAt < Date.now()) {
+      phoneOtpStore.delete(sessionId)
+      return res.status(401).json({ error: 'OTP expired' })
+    }
+
+    // Verify OTP
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    if (msg91Configured) {
+      try {
+        await verifySmsOtp(session.phone, otp.trim())
+      } catch {
+        return res.status(401).json({ error: 'Incorrect OTP' })
+      }
+    } else {
+      if (otp.trim() !== session.otp) {
+        return res.status(401).json({ error: 'Incorrect OTP' })
+      }
+    }
+
+    phoneOtpStore.delete(sessionId)
+
+    // Grant VPC
+    await supabase
+      .from('users')
+      .update({ vpc_status: 'approved' })
+      .eq('id', req.user.id)
+
+    res.json({ ok: true, vpc_status: 'approved' })
+  } catch (err) {
+    console.error('VPC OTP verify error:', err)
+    res.status(500).json({ error: 'Verification failed' })
   }
 })
 

@@ -5,3 +5,5 @@
 export function formatComplaintNo(serial) {
   return `VOX-${String(serial).padStart(4, '0')}`
 }
+
+export default formatComplaintNo

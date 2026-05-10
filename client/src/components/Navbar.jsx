@@ -8,9 +8,10 @@ import { useLanguage } from '../context/LanguageContext'
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { lang, toggleLang, t } = useLanguage()
+  const { lang, toggleLang, t, setLang } = useLanguage()
 
   const handleLogout = () => {
+    setLang('en')  // reset language on sign-out so next user starts in English (#bug-8)
     logout()
     navigate('/login')
   }

@@ -46,7 +46,7 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
         .select(`
           id, action, note, performed_by_role, created_at,
           performer:performed_by ( id, name, role ),
-          complaint:complaint_id ( id, complaint_no_display, domain, status )
+          complaint:complaint_id ( id, complaint_no, domain, status )
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
@@ -63,7 +63,7 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
           note:         e.note || null,
           actor_name:   e.performer?.name || 'System',
           actor_role:   e.performed_by_role || e.performer?.role || '',
-          complaint_no: e.complaint?.complaint_no_display || null,
+          complaint_no: e.complaint?.complaint_no ? `VOX-${String(e.complaint.complaint_no).padStart(4, '0')}` : null,
           complaint_id: e.complaint?.id || null,
           domain:       e.complaint?.domain || null,
           status:       e.complaint?.status || null,
@@ -74,34 +74,32 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
 
     // ── 2. complaint_access_log ────────────────────────────────────────────────
     if (!eventType || eventType === 'access') {
+      // Actual columns: accessed_by (FK → users), accessed_by_role, is_assigned_handler, created_at
       let q = supabase
         .from('complaint_access_log')
         .select(`
-          id, access_type, created_at,
-          viewer:viewer_id ( id, name, role ),
-          complaint:complaint_id ( id, complaint_no_display, domain )
+          id, accessed_by_role, created_at,
+          viewer:accessed_by ( id, name, role ),
+          complaint:complaint_id ( id, complaint_no, domain )
         `)
         .order('created_at', { ascending: false })
 
-      if (roleFilter) {
-        // filter by viewer role — need to join via viewer.role
-        // Supabase JS doesn't support nested eq on joins; fetch all and filter client-side
-      }
       if (dateFrom) q = q.gte('created_at', dateFrom)
       if (dateTo)   q = q.lte('created_at', dateTo + 'T23:59:59Z')
 
       const { data, error } = await q.range(0, 4999)
       if (!error && data) {
         data.forEach(e => {
-          if (roleFilter && e.viewer?.role !== roleFilter) return
+          const viewerRole = e.accessed_by_role || e.viewer?.role || ''
+          if (roleFilter && viewerRole !== roleFilter) return
           events.push({
             id:           `ac-${e.id}`,
             event_type:   'access',
-            action:       `Complaint viewed (${e.access_type || 'view'})`,
+            action:       'Complaint viewed',
             note:         null,
             actor_name:   e.viewer?.name || 'Unknown',
-            actor_role:   e.viewer?.role || '',
-            complaint_no: e.complaint?.complaint_no_display || null,
+            actor_role:   viewerRole,
+            complaint_no: e.complaint?.complaint_no ? `VOX-${String(e.complaint.complaint_no).padStart(4, '0')}` : null,
             complaint_id: e.complaint?.id || null,
             domain:       e.complaint?.domain || null,
             status:       null,

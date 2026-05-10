@@ -22,9 +22,9 @@ import { formatIST } from '../utils/formatDate'
 import { ROLES } from '../utils/constants'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
- import { RequestConsensusButton } from '../components/ConsensusVotingPanel'
- import SentimentBadge from '../components/SentimentBadge'
- import ResolutionSuggestions from '../components/ResolutionSuggestions'
+import { RequestConsensusButton } from '../components/ConsensusVotingPanel'
+import SentimentBadge from '../components/SentimentBadge'
+import ResolutionSuggestions from '../components/ResolutionSuggestions'
 
  export default function ComplaintDetail() {
   const { id } = useParams()
@@ -953,6 +953,35 @@ import toast from 'react-hot-toast'
                         style={actionBtnStyle('green')}>{t('detail.markResolved')}</button>
                     )
                   })()}
+
+                  {/* B7: Google Calendar Integration */}
+                  {['council_member', 'class_teacher', 'coordinator', 'principal'].includes(role) && (
+                    <button
+                      onClick={() => {
+                        const domainLabel = {
+                          academics: 'Academics',
+                          infrastructure: 'Infrastructure',
+                          safety: 'Safety',
+                          personal: 'Personal',
+                          behaviour: 'Behaviour',
+                          other: 'Other'
+                        }[complaint.domain] || complaint.domain
+                        
+                        const title = `Follow-up: ${complaint.complaint_no_display} (${domainLabel})`
+                        const details = (complaint.description || '').substring(0, 200) + '...'
+                        const tomorrow = new Date()
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        const date = tomorrow.toISOString().split('T')[0]
+                        
+                        const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${date}/${date}&details=${encodeURIComponent(details)}`
+                        window.open(calendarUrl, '_blank')
+                      }}
+                      className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 transition-all"
+                      style={{ background: '#2563EB', color: '#fff', border: 'none' }}
+                    >
+                      📅 Add to Calendar
+                    </button>
+                  )}
                   {showResolveInput && (
                     <div className="rounded-xl p-3 space-y-2" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                        <div className="flex items-center justify-between">

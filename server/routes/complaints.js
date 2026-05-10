@@ -147,14 +147,48 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
       // Staff complaint: route directly to coordinator, no council involvement
       currentHandlerRole = 'coordinator'
     } else {
-      // Normal flow: round-robin assign to a council member
-      const { data: councilMembers } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'council_member')
-      assigned = councilMembers && councilMembers.length > 0
-        ? councilMembers[Math.floor(Math.random() * councilMembers.length)].id
-        : null
+      // Check assignment rules first
+      const { data: ruleData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'assignment_rules')
+        .single()
+
+      if (ruleData?.value) {
+        try {
+          const rules = JSON.parse(ruleData.value)
+          if (Array.isArray(rules) && rules.length > 0) {
+            // Sort by priority and find matching rule
+            const sortedRules = [...rules].sort((a, b) => (a.priority || 10) - (b.priority || 10))
+            const matchingRule = sortedRules.find(rule => {
+              if (rule.condition_type === 'domain') {
+                return rule.condition_value.toLowerCase() === domain.toLowerCase()
+              }
+              if (rule.condition_type === 'section') {
+                return rule.condition_value.toLowerCase() === (req.user.section || '').toLowerCase()
+              }
+              if (rule.condition_type === 'house') {
+                return rule.condition_value.toLowerCase() === (req.user.house || '').toLowerCase()
+              }
+              return false
+            })
+            if (matchingRule) {
+              assigned = matchingRule.assign_to_id
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback to round-robin if no rule matched
+      if (!assigned) {
+        const { data: councilMembers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'council_member')
+        assigned = councilMembers && councilMembers.length > 0
+          ? councilMembers[Math.floor(Math.random() * councilMembers.length)].id
+          : null
+      }
     }
 
     // SLA: 48 h for normal, 7 calendar days (168 h) for POSH/POCSO (statutory deadline)
@@ -384,9 +418,14 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     if (error || !complaint) return res.status(404).json({ error: 'Complaint not found' })
 
-    // Access control
-    if (role === 'student' && complaint.student_id !== userId) {
-      return res.status(403).json({ error: 'Access denied' })
+    // Access control — handle Supabase join which may replace FK with object
+    if (role === 'student') {
+      const actualStudentId = (complaint.student_id && typeof complaint.student_id === 'object')
+        ? (complaint.student_id.id || complaint.student?.id)
+        : complaint.student_id
+      if (actualStudentId !== userId) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
     }
     if (role === 'guardian') {
       const { data: child } = await supabase
@@ -397,19 +436,25 @@ router.get('/:id', verifyToken, async (req, res) => {
         .maybeSingle()
       if (!child) return res.status(403).json({ error: 'Access denied' })
     }
-    if (role === 'council_member' && complaint.assigned_council_member_id !== userId) {
-      // #20 — allow delegate access
-      const today = new Date().toISOString().slice(0, 10)
-      const { data: delegation } = await supabase
-        .from('delegation_rules')
-        .select('id')
-        .eq('delegate_id', userId)
-        .eq('delegator_id', complaint.assigned_council_member_id)
-        .lte('start_date', today)
-        .gte('end_date', today)
-        .limit(1)
-        .maybeSingle()
-      if (!delegation) return res.status(403).json({ error: 'Access denied' })
+    if (role === 'council_member') {
+      const actualAssignedId = (complaint.assigned_council_member_id && typeof complaint.assigned_council_member_id === 'object')
+        ? (complaint.assigned_council_member_id.id || complaint.council_member?.id)
+        : complaint.assigned_council_member_id
+      const isDirectlyAssigned = actualAssignedId && actualAssignedId === userId
+      if (!isDirectlyAssigned) {
+        // #20 — allow delegate access
+        const today = new Date().toISOString().slice(0, 10)
+        const { data: delegation } = await supabase
+          .from('delegation_rules')
+          .select('id')
+          .eq('delegate_id', userId)
+          .eq('delegator_id', actualAssignedId)
+          .lte('start_date', today)
+          .gte('end_date', today)
+          .limit(1)
+          .maybeSingle()
+        if (!delegation) return res.status(403).json({ error: 'Access denied' })
+      }
     }
 
     const result = {

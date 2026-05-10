@@ -17,19 +17,22 @@ import auditLogRoutes from './routes/auditLog.js'
 import workflowTemplateRoutes from './routes/workflowTemplates.js'
 import resolutionTemplateRoutes from './routes/resolutionTemplates.js'
 import delegationRoutes from './routes/delegations.js'
+import safeDialogueRoutes from './routes/safeDialogue.js'
+import guardianRoutes from './routes/guardian.js'
+import configRoutes from './routes/config.js'
 import { startAutoEscalateCron, startRetentionCron, startTermExpiryCron, startDailyDigestCron } from './jobs/autoEscalate.js'
 
 dotenv.config()
 
 const app = express()
+app.set('trust proxy', 1)
 const PORT = process.env.PORT || 5000
 
-// ── Security middleware ──────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],  // allow Vite inline scripts in dev
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:5173'],
@@ -38,18 +41,15 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }))
 
-// ── Rate Limiters ────────────────────────────────────────────────────────────
-// Auth: 5 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 20,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // only count failed attempts
+  skipSuccessfulRequests: true,
 })
 
-// General API: 200 requests per minute per IP
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 200,
@@ -58,7 +58,6 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-// Complaint creation: 10 per hour per IP
 const complaintCreateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
@@ -67,7 +66,6 @@ const complaintCreateLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-// Upload: 20 per hour per IP
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
@@ -76,17 +74,14 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-// ── Core Middleware ──────────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true, // required for cross-origin cookie exchange (#51)
+  credentials: true,
 }))
-app.use(cookieParser())               // parse HttpOnly auth cookie (#51)
+app.use(cookieParser())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-// ── Input sanitization middleware ────────────────────────────────────────────
-// Strip dangerous HTML tags/attributes from all string fields in request body
 const DANGEROUS = /<script[\s\S]*?>[\s\S]*?<\/script>|<\/?(script|iframe|object|embed|link|meta)[^>]*>|on\w+\s*=\s*["'][^"']*["']/gi
 function sanitizeBody(obj) {
   if (!obj || typeof obj !== 'object') return obj
@@ -101,10 +96,8 @@ function sanitizeBody(obj) {
 }
 app.use((req, res, next) => { sanitizeBody(req.body); next() })
 
-// Apply general limiter to all /api routes
 app.use('/api', apiLimiter)
 
-// ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/complaints', complaintRoutes)
 app.use('/api/complaints/:id/timeline', timelineRoutes)
@@ -117,39 +110,45 @@ app.use('/api/audit-log', auditLogRoutes)
 app.use('/api/workflow-templates', workflowTemplateRoutes)
 app.use('/api/resolution-templates', resolutionTemplateRoutes)
 app.use('/api/delegations', delegationRoutes)
+app.use('/api/safe-dialogue', safeDialogueRoutes)
+app.use('/api/guardian', guardianRoutes)
+app.use('/api/config', configRoutes)
 
-// ── WhatsApp test endpoint ────────────────────────────────────────────────────
 app.get('/api/test-whatsapp', async (req, res) => {
   const { notifyAdminAlert } = await import('./services/notifications.js')
   const adminWA = process.env.ADMIN_WHATSAPP_NUMBER
   if (!adminWA) return res.json({ ok: false, reason: 'ADMIN_WHATSAPP_NUMBER not set' })
   try {
-    await notifyAdminAlert(adminWA, '🧪 Test message from Vox DPSI — WhatsApp is working!')
+    await notifyAdminAlert(adminWA, 'Test message from Vox DPSI')
     res.json({ ok: true, to: adminWA, from: process.env.TWILIO_WHATSAPP_FROM || 'sandbox' })
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message })
   }
 })
 
-// ── Health check (also at /api/health for keep-alive pings from client) ──────
-app.get('/health',     (req, res) => res.json({ status: 'ok', ts: Date.now() }))
-app.get('/api/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))
+app.get(['/health', '/api/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    ts: Date.now(),
+    uptime_seconds: Math.floor(process.uptime()),
+    env: process.env.NODE_ENV || 'development',
+    version: '2.0.0'
+  })
+})
 
-// ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }))
 
-// ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).json({ error: 'Internal server error' })
 })
 
 app.listen(PORT, () => {
-  console.log(`🚀 Vox DPSI server running on http://localhost:${PORT}`)
+  console.log(`Vox DPSI server running on http://localhost:${PORT}`)
   startAutoEscalateCron()
-  startRetentionCron()          // daily 02:30 IST (#32)
-  startTermExpiryCron()         // daily 08:00 IST (#24)
-  startDailyDigestCron()        // daily 07:30 IST (#28)
+  startRetentionCron()
+  startTermExpiryCron()
+  startDailyDigestCron()
 })
 
 export default app

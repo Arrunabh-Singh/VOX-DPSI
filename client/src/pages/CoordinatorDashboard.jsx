@@ -5,13 +5,14 @@ import Navbar from '../components/Navbar'
 import ComplaintCard from '../components/ComplaintCard'
 import { SkeletonList } from '../components/SkeletonCard'
 import Footer from '../components/Footer'
-import { DOMAINS } from '../utils/constants'
+import { DOMAINS, STATUSES } from '../utils/constants'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import ErasureRequestsPanel from '../components/ErasureRequestsPanel'
 import { WorkflowTemplatesPanelWithAuth } from '../components/WorkflowTemplatesPanel'
 import BulkActionBar from '../components/BulkActionBar'
 import MeetingAgendaGenerator from '../components/MeetingAgendaGenerator'
 import DelegationManager from '../components/DelegationManager'
+import AssignmentRulesPanel from '../components/AssignmentRulesPanel'
 import api from '../utils/api'
 
 const STATUS_FILTERS = [
@@ -90,7 +91,7 @@ export default function CoordinatorDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-          {[{ key: 'complaints', label: '📋 Complaints' }, { key: 'analytics', label: '📊 Analytics' }, { key: 'agenda', label: '📅 Meeting Agenda' }, { key: 'erasure', label: '🗑️ Erasure Requests' }, { key: 'workflows', label: '⚙️ Workflows' }, { key: 'delegation', label: '🔁 Delegations' }].map(t => (
+          {[{ key: 'complaints', label: '📋 Complaints' }, { key: 'analytics', label: '📊 Analytics' }, { key: 'agenda', label: '📅 Meeting Agenda' }, { key: 'erasure', label: '🗑️ Erasure Requests' }, { key: 'workflows', label: '⚙️ Workflows' }, { key: 'rules', label: '⚙️ Assignment Rules' }, { key: 'delegation', label: '🔁 Delegations' }].map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
               style={activeTab === t.key
@@ -209,8 +210,9 @@ export default function CoordinatorDashboard() {
         {activeTab === 'analytics' && <AnalyticsDashboard complaints={complaints} showCouncilPerformance={false} />}
         {activeTab === 'agenda' && <MeetingAgendaGenerator complaints={complaints} />}
         {activeTab === 'erasure' && <ErasureRequestsPanel />}
-        {activeTab === 'workflows' && <WorkflowTemplatesPanelWithAuth canWrite={true} />}
-        {activeTab === 'delegation' && <DelegationManager currentUser={user} />}
+{activeTab === 'workflows' && <WorkflowTemplatesPanelWithAuth canWrite={true} />}
+{activeTab === 'rules' && <AssignmentRulesPanel />}
+{activeTab === 'delegation' && <DelegationManager currentUser={user} />}
       </main>
       <Footer />
 

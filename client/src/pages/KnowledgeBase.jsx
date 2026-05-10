@@ -109,10 +109,18 @@ export default function KnowledgeBase() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <section
           className="rounded-2xl p-6 mb-6"
-          style={{ background: '#003366', border: '1px solid rgba(255,215,0,0.25)', boxShadow: '0 4px 24px rgba(0,0,0,0.22)' }}
+          style={{
+            background: '#003366',
+            border: '1px solid rgba(255,215,0,0.25)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.22)',
+          }}
         >
-          <p className="text-sm font-bold uppercase tracking-wide" style={{ color: '#FFD700' }}>Student Help</p>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">Knowledge Base</h1>
+          <p className="text-sm font-bold uppercase tracking-wide" style={{ color: '#FFD700' }}>
+            Student Help
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">
+            Knowledge Base
+          </h1>
           <p className="text-sm mt-2 max-w-2xl" style={{ color: 'rgba(255,255,255,0.74)' }}>
             Quick answers about raising complaints, privacy, and what happens after you submit.
           </p>
@@ -122,15 +130,22 @@ export default function KnowledgeBase() {
           <label htmlFor="faq-search" className="block text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#003366' }}>
             Search FAQs
           </label>
-          <input
-            id="faq-search"
-            type="search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by question or answer..."
-            className="w-full rounded-xl px-4 py-3 text-sm font-medium focus:outline-none"
-            style={{ background: '#fff', border: '1.5px solid rgba(0,51,102,0.18)', color: '#111827' }}
-          />
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" aria-hidden="true">?</span>
+            <input
+              id="faq-search"
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by question or answer..."
+              className="w-full rounded-xl py-3 pl-11 pr-4 text-sm font-medium focus:outline-none"
+              style={{
+                background: '#fff',
+                border: '1.5px solid rgba(0,51,102,0.18)',
+                color: '#111827',
+              }}
+            />
+          </div>
           {search.trim() && (
             <p className="text-xs mt-2" style={{ color: '#6B7280' }}>
               {totalMatches} result{totalMatches === 1 ? '' : 's'} found
@@ -140,6 +155,7 @@ export default function KnowledgeBase() {
 
         {filteredSections.length === 0 ? (
           <div className="glass rounded-2xl p-10 text-center">
+            <p className="text-4xl mb-3">?</p>
             <h2 className="font-black text-lg" style={{ color: '#003366' }}>No matching FAQs</h2>
             <p className="text-sm text-gray-500 mt-1">Try searching for complaint, privacy, status, appeal, or attachment.</p>
           </div>
@@ -149,18 +165,25 @@ export default function KnowledgeBase() {
               <section key={section.title} className="glass rounded-2xl p-5">
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <h2 className="text-lg font-black" style={{ color: '#003366' }}>{section.title}</h2>
-                  <span className="text-xs font-black rounded-full px-3 py-1" style={{ background: 'rgba(255,215,0,0.18)', color: '#003366', border: '1px solid rgba(255,215,0,0.45)' }}>
+                  <span
+                    className="text-xs font-black rounded-full px-3 py-1"
+                    style={{ background: 'rgba(255,215,0,0.18)', color: '#003366', border: '1px solid rgba(255,215,0,0.45)' }}
+                  >
                     {section.items.length}
                   </span>
                 </div>
 
                 <div className="space-y-3">
-                  {section.items.map(item => {
+                  {section.items.map((item) => {
                     const id = `${section.title}-${item.question}`
                     const isOpen = openItems.has(id)
 
                     return (
-                      <div key={id} className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,51,102,0.12)', background: '#fff' }}>
+                      <div
+                        key={id}
+                        className="rounded-xl overflow-hidden"
+                        style={{ border: '1px solid rgba(0,51,102,0.12)', background: '#fff' }}
+                      >
                         <button
                           type="button"
                           onClick={() => toggleItem(id)}
@@ -169,13 +192,19 @@ export default function KnowledgeBase() {
                           aria-expanded={isOpen}
                         >
                           <span className="font-bold text-sm sm:text-base">{item.question}</span>
-                          <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black" style={{ background: isOpen ? '#003366' : 'rgba(255,215,0,0.24)', color: isOpen ? '#FFD700' : '#003366' }}>
+                          <span
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black"
+                            style={{ background: isOpen ? '#003366' : 'rgba(255,215,0,0.24)', color: isOpen ? '#FFD700' : '#003366' }}
+                          >
                             {isOpen ? '-' : '+'}
                           </span>
                         </button>
 
                         {isOpen && (
-                          <div className="px-4 pb-4 text-sm leading-relaxed animate-slide-down" style={{ color: '#4B5563' }}>
+                          <div
+                            className="px-4 pb-4 text-sm leading-relaxed animate-slide-down"
+                            style={{ color: '#4B5563' }}
+                          >
                             {item.answer}
                           </div>
                         )}

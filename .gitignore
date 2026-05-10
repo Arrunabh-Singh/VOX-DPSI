@@ -8,13 +8,18 @@ npm-debug.log*
 server/.env
 client/.env
 .env
+.env.*
 
 # Vite timestamp files
 *.timestamp-*.mjs
 
 # Scripts with hardcoded credentials
 server/run_schema.mjs
+kilo_mcp_settings.json
+run_sql.ps1
+test_sql.ps1
 
+# IDE
 .vercel
 .fuse_hidden*
 SEED_MIGRATION.sql

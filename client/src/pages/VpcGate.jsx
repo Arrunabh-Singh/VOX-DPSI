@@ -5,11 +5,12 @@
  * Renders in place of the dashboard until vpc_status === 'granted'.
  *
  * Flow:
- *  1. Show introduction + parent email form
- *  2. POST /api/auth/vpc-request → saves token, sends email
- *  3. "Awaiting consent" view — polls /api/auth/vpc-status every 10 s
- *  4. On grant → update user in AuthContext → gate lifts, dashboard shown
- *  5. In dev, show clickable grant link from API response for easy testing
+ *  1. Show introduction + tab switcher (Email or SMS)
+ *  2. Email flow: POST /api/auth/vpc-request → saves token, sends email
+ *  3. SMS flow: POST /api/auth/vpc-otp-request → sends SMS OTP
+ *  4. "Awaiting consent" view — polls /api/auth/vpc-status every 10 s
+ *  5. On grant → update user in AuthContext → gate lifts, dashboard shown
+ *  6. In dev, show clickable grant link from API response for easy testing
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -58,6 +59,13 @@ export default function VpcGate({ children }) {
   const [polling,     setPolling]       = useState(false)
   const [devGrantUrl, setDevGrantUrl]   = useState(null)
   const pollingRef = useRef(null)
+  const [activeTab, setActiveTab] = useState('email') // 'email' or 'sms'
+  const [smsPhone, setSmsPhone] = useState('')
+  const [smsOtp, setSmsOtp] = useState('')
+  const [smsSessionId, setSmsSessionId] = useState('')
+  const [smsStep, setSmsStep] = useState(1) // 1: phone input, 2: OTP input
+  const [smsSubmitting, setSmsSubmitting] = useState(false)
+  const [smsDevOtp, setSmsDevOtp] = useState('')
 
   // ── Poll for consent status ───────────────────────────────────────────────
   const pollStatus = useCallback(async () => {
@@ -97,11 +105,54 @@ export default function VpcGate({ children }) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Gate bypass — not a student / already granted ─────────────────────────
-  if (!needsVpc) return children
+// ── SMS Flow handlers ───────────────────────────────────────────────────────
+  const handleSmsRequest = async (e) => {
+    e.preventDefault()
+    if (!/^\d{10}$/.test(smsPhone)) {
+      toast.error('Enter a valid 10-digit mobile number')
+      return
+    }
+    setSmsSubmitting(true)
+    try {
+      const { data } = await api.post('/api/auth/vpc-otp-request', { phone: smsPhone })
+      setSmsSessionId(data.sessionId)
+      setSmsDevOtp(data.devOtp || '')
+      setSmsStep(2)
+      setVpcStatus('pending')
+      toast.success('OTP sent to your mobile!')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send OTP')
+    } finally {
+      setSmsSubmitting(false)
+    }
+  }
 
-  // ── Handle submit ─────────────────────────────────────────────────────────
-  const handleSubmit = async (e) => {
+  const handleSmsVerify = async (e) => {
+    e.preventDefault()
+    if (!smsOtp || !smsSessionId) return
+    setSmsSubmitting(true)
+    try {
+      const { data } = await api.post('/api/auth/vpc-otp-verify', {
+        sessionId: smsSessionId,
+        otp: smsOtp
+      })
+      if (data.vpc_status === 'approved') {
+        setVpcStatus('granted')
+        setUser(prev => ({ ...prev, vpc_status: 'granted' }))
+        toast.success('✅ Parental consent verified via SMS!')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Verification failed')
+    } finally {
+      setSmsSubmitting(false)
+    }
+  }
+
+// ── Gate bypass — not a student / already granted ─────────────────────────
+   if (!needsVpc) return children
+
+   // ── Handle submit ─────────────────────────────────────────────────────────
+   const handleSubmit = async (e) => {
     e.preventDefault()
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRe.test(parentEmail)) {
@@ -166,6 +217,34 @@ export default function VpcGate({ children }) {
               Under the <strong>Digital Personal Data Protection Act 2023 (Section 9)</strong>,
               we need a parent or guardian's consent before you can use this platform.
             </p>
+          </div>
+
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('email')}
+              style={{
+                flex: 1, padding: '10px', borderRadius: '10px',
+                background: activeTab === 'email' ? '#003366' : '#F3F4F6',
+                color: activeTab === 'email' ? '#FFD700' : '#6B7280',
+                border: 'none', fontWeight: '600', fontSize: '14px', cursor: 'pointer',
+              }}
+            >
+              📧 Via Email
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('sms')}
+              style={{
+                flex: 1, padding: '10px', borderRadius: '10px',
+                background: activeTab === 'sms' ? '#003366' : '#F3F4F6',
+                color: activeTab === 'sms' ? '#FFD700' : '#6B7280',
+                border: 'none', fontWeight: '600', fontSize: '14px', cursor: 'pointer',
+              }}
+            >
+              📱 Via SMS (Faster)
+            </button>
           </div>
 
           {/* Info box */}
@@ -256,9 +335,94 @@ export default function VpcGate({ children }) {
             </>
           )}
 
-          {/* ── EMAIL FORM ─────────────────────────────────────────────── */}
-          {(!sentStatus || ['expired', 'declined'].includes(vpcStatus)) && (
-            <form onSubmit={handleSubmit}>
+          {/* ── SMS FORM (Step 1: Phone) ───────────────────────────────────── */}
+          {activeTab === 'sms' && smsStep === 1 && (!sentStatus || ['expired', 'declined'].includes(vpcStatus)) && (
+            <form onSubmit={handleSmsRequest}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
+                Parent / Guardian Mobile Number
+              </label>
+              <input
+                type="tel"
+                value={smsPhone}
+                onChange={e => setSmsPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="e.g. 9876543210"
+                required
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: '10px', fontSize: '14px',
+                  border: '1.5px solid #D1D5DB', outline: 'none', color: '#1A1A1A', boxSizing: 'border-box', marginBottom: '4px',
+                }}
+              />
+              <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '8px 0 20px', lineHeight: '1.5' }}>
+                We will send a single OTP to this number. Standard SMS charges may apply.
+              </p>
+              <button
+                type="submit"
+                disabled={smsSubmitting || !smsPhone}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px',
+                  background: smsSubmitting || !smsPhone ? '#D1D5DB' : 'linear-gradient(135deg,#003366,#005599)',
+                  color: smsSubmitting || !smsPhone ? '#9CA3AF' : '#FFD700',
+                  border: 'none', fontWeight: '800', fontSize: '15px',
+                  cursor: smsSubmitting || !smsPhone ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                }}
+              >
+                {smsSubmitting ? <><Spin size={18} color="#FFD700" /> Sending OTP…</> : '📱 Send OTP'}
+              </button>
+            </form>
+          )}
+
+          {/* ── SMS FORM (Step 2: OTP) ───────────────────────────────────── */}
+          {activeTab === 'sms' && smsStep === 2 && vpcStatus !== 'granted' && (
+            <form onSubmit={handleSmsVerify}>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔐</div>
+                <p style={{ fontSize: '14px', color: '#6B7280' }}>
+                  Enter the 6-digit OTP sent to <strong>{smsPhone}</strong>
+                </p>
+              </div>
+              <input
+                type="text"
+                value={smsOtp}
+                onChange={e => setSmsOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Enter OTP"
+                maxLength={6}
+                required
+                style={{
+                  width: '100%', padding: '14px 16px', borderRadius: '10px', fontSize: '18px',
+                  border: '1.5px solid #D1D5DB', outline: 'none', textAlign: 'center', letterSpacing: '4px', marginBottom: '4px',
+                }}
+              />
+              {smsDevOtp && (
+                <p style={{ fontSize: '12px', color: '#D97706', margin: '4px 0 12px', fontWeight: '600' }}>
+                  DEV MODE: Your OTP is {smsDevOtp}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={smsSubmitting || smsOtp.length < 6}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px',
+                  background: smsSubmitting || smsOtp.length < 6 ? '#D1D5DB' : '#16A34A',
+                  color: smsSubmitting || smsOtp.length < 6 ? '#9CA3AF' : '#fff',
+                  border: 'none', fontWeight: '800', fontSize: '15px',
+                  cursor: smsSubmitting || smsOtp.length < 6 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {smsSubmitting ? <><Spin size={18} color="#fff" /> Verifying…</> : '✅ Verify OTP'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSmsStep(1); setSmsOtp(''); setSmsSessionId('') }}
+                style={{
+                  width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
+                  background: 'transparent', color: '#6B7280', fontSize: '13px', cursor: 'pointer', marginTop: '8px',
+                }}
+              >
+                ← Use different number
+              </button>
+            </form>
+          )}
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
                 Parent / Guardian Email Address
               </label>
