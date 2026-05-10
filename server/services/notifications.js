@@ -6,7 +6,8 @@ import {
   notifyAutoEscalation,
   notifyAdminAlert,
 } from './whatsapp.js'
-import { sendStatusChangeEmail, sendComplaintStatusSms } from './msg91.js'
+import { sendStatusChangeEmail } from './email.js'
+import { sendComplaintStatusSms } from './msg91.js'
 
 // Admin/supervisor number that gets WhatsApp for EVERY key event
 const ADMIN_WA = process.env.ADMIN_WHATSAPP_NUMBER || null

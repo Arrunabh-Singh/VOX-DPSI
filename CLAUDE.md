@@ -859,6 +859,14 @@ These tasks are **not yet built**:
 | 76 | DPIA documentation | High |
 | 80 | OTP-based parental verification | Medium |
 | 81 | Mumbai region migration (Supabase ap-south-1, Vercel bom1) | Low |
+|    |                                                             |       |
+|    | Steps when ready:                                           |       |
+|    | 1. Supabase: New project in ap-south-1 (Mumbai)             |       |
+|    | 2. pg_dump the existing project → pg_restore to new project |       |
+|    | 3. Update SUPABASE_URL + SUPABASE_SERVICE_KEY in Railway env vars |   |
+|    | 4. Update VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in Vercel env vars | |
+|    | 5. Test auth + file storage (bucket policies need reapplication) |     |
+|    | 6. Update CLAUDE.md with new Supabase project ID            |       |
 
 ---
 

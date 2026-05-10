@@ -525,6 +525,106 @@ router.get('/vpc-status', verifyToken, async (req, res) => {
   }
 })
 
+// ── OTP-Based VPC Verification (B3 Task #80) ────────────────────────────────
+
+// POST /api/auth/vpc-otp-request — send OTP to parent's phone for VPC verification
+router.post('/vpc-otp-request', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students need VPC verification' })
+    }
+
+    const { phone } = req.body
+    if (!phone || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ error: 'Valid 10-digit phone number required' })
+    }
+
+    // Check if MSG91 is configured
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    let otp
+
+    if (msg91Configured) {
+      const result = await sendSmsOtp(phone)
+      otp = result.otp
+    } else {
+      otp = Math.floor(100000 + Math.random() * 900000).toString()
+      console.log(`[VPC-SMS-DEV] OTP for 91${phone}: ${otp}`)
+    }
+
+    // Store OTP in phoneOtpStore for later verification
+    const sessionId = randomUUID()
+    phoneOtpStore.set(sessionId, {
+      userId: req.user.id,
+      phone,
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    })
+
+    const response = { ok: true, sessionId, maskedPhone: `***${phone.slice(-3)}` }
+    if (!msg91Configured && process.env.NODE_ENV !== 'production') {
+      response.devOtp = otp
+      response.devNote = 'MSG91 not configured — OTP shown here for development'
+    }
+    res.json(response)
+  } catch (err) {
+    console.error('VPC OTP request error:', err)
+    res.status(500).json({ error: err.message || 'Failed to send OTP' })
+  }
+})
+
+// POST /api/auth/vpc-otp-verify — verify OTP and grant VPC
+router.post('/vpc-otp-verify', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students need VPC verification' })
+    }
+
+    const { sessionId, otp } = req.body
+    if (!sessionId || !otp) {
+      return res.status(400).json({ error: 'sessionId and otp are required' })
+    }
+
+    const session = phoneOtpStore.get(sessionId)
+    if (!session) {
+      return res.status(401).json({ error: 'Session expired or invalid' })
+    }
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Session mismatch' })
+    }
+    if (session.expiresAt < Date.now()) {
+      phoneOtpStore.delete(sessionId)
+      return res.status(401).json({ error: 'OTP expired' })
+    }
+
+    // Verify OTP
+    const msg91Configured = !!process.env.MSG91_AUTH_KEY && !!process.env.MSG91_OTP_TEMPLATE_ID
+    if (msg91Configured) {
+      try {
+        await verifySmsOtp(session.phone, otp.trim())
+      } catch {
+        return res.status(401).json({ error: 'Incorrect OTP' })
+      }
+    } else {
+      if (otp.trim() !== session.otp) {
+        return res.status(401).json({ error: 'Incorrect OTP' })
+      }
+    }
+
+    phoneOtpStore.delete(sessionId)
+
+    // Grant VPC
+    await supabase
+      .from('users')
+      .update({ vpc_status: 'approved' })
+      .eq('id', req.user.id)
+
+    res.json({ ok: true, vpc_status: 'approved' })
+  } catch (err) {
+    console.error('VPC OTP verify error:', err)
+    res.status(500).json({ error: 'Verification failed' })
+  }
+})
+
 // ── Data Erasure Request (#60) — DPDP Act 2023 Section 13 ────────────────────
 // Any user (student or their parent/guardian) can submit a formal erasure request.
 // This creates an audit record and notifies coordinators. Actual PII deletion

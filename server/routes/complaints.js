@@ -147,14 +147,48 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
       // Staff complaint: route directly to coordinator, no council involvement
       currentHandlerRole = 'coordinator'
     } else {
-      // Normal flow: round-robin assign to a council member
-      const { data: councilMembers } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'council_member')
-      assigned = councilMembers && councilMembers.length > 0
-        ? councilMembers[Math.floor(Math.random() * councilMembers.length)].id
-        : null
+      // Check assignment rules first
+      const { data: ruleData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'assignment_rules')
+        .single()
+
+      if (ruleData?.value) {
+        try {
+          const rules = JSON.parse(ruleData.value)
+          if (Array.isArray(rules) && rules.length > 0) {
+            // Sort by priority and find matching rule
+            const sortedRules = [...rules].sort((a, b) => (a.priority || 10) - (b.priority || 10))
+            const matchingRule = sortedRules.find(rule => {
+              if (rule.condition_type === 'domain') {
+                return rule.condition_value.toLowerCase() === domain.toLowerCase()
+              }
+              if (rule.condition_type === 'section') {
+                return rule.condition_value.toLowerCase() === (req.user.section || '').toLowerCase()
+              }
+              if (rule.condition_type === 'house') {
+                return rule.condition_value.toLowerCase() === (req.user.house || '').toLowerCase()
+              }
+              return false
+            })
+            if (matchingRule) {
+              assigned = matchingRule.assign_to_id
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback to round-robin if no rule matched
+      if (!assigned) {
+        const { data: councilMembers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'council_member')
+        assigned = councilMembers && councilMembers.length > 0
+          ? councilMembers[Math.floor(Math.random() * councilMembers.length)].id
+          : null
+      }
     }
 
     // SLA: 48 h for normal, 7 calendar days (168 h) for POSH/POCSO (statutory deadline)
