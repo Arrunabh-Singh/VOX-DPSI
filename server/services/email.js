@@ -1,51 +1,63 @@
 /**
  * Email service
  *
- * Production (Railway): set RESEND_API_KEY — uses Resend HTTP API (never blocked by firewalls)
- * Local dev:            no env vars needed — logs email content to console
+ * Production (Railway): set BREVO_API_KEY — uses Brevo HTTP API (port 443, never blocked)
+ *   Free tier: 300 emails/day to ANY address, no domain ownership required.
+ *   Setup: sign up at brevo.com → Settings → API Keys → Generate
+ *          Then: Senders & IP → Senders → add & verify arrunabh.s@gmail.com
+ *          Set BREVO_SENDER_EMAIL=arrunabh.s@gmail.com in Railway env vars.
  *
- * Railway blocks outbound SMTP ports (25/465/587), so nodemailer+Gmail will
- * always time out there. Resend sends over HTTPS (port 443) which is always open.
+ * Local dev: no env vars needed — OTP logged to console.
  *
- * Sign up free at https://resend.com → API Keys → create key → add to Railway as RESEND_API_KEY
- * From address: use "Vox DPSI <onboarding@resend.dev>" until you verify your own domain.
+ * Why not Gmail SMTP? Railway blocks outbound SMTP ports (25/465/587).
+ * Why not Resend? Free tier only sends to your own email without a verified domain.
  */
 
-import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 
-const USE_RESEND = !!process.env.RESEND_API_KEY
-const resend     = USE_RESEND ? new Resend(process.env.RESEND_API_KEY) : null
-
-// From address: prefer RESEND_FROM env var, else Resend sandbox address (no domain needed)
-const FROM_ADDR = process.env.RESEND_FROM || 'Vox DPSI <onboarding@resend.dev>'
+const BREVO_API_KEY    = process.env.BREVO_API_KEY
+const USE_BREVO        = !!BREVO_API_KEY
+const SENDER_EMAIL     = process.env.BREVO_SENDER_EMAIL || 'arrunabh.s@gmail.com'
+const SENDER_NAME      = 'Vox DPSI'
 
 // Dev-only nodemailer null transport (logs to console, no real sending)
 const devTransporter = nodemailer.createTransport({ jsonTransport: true })
 
-// Unified send function — Resend in prod, console log in dev
 async function sendMail({ to, subject, html, text }) {
-  if (USE_RESEND) {
-    const { data, error } = await resend.emails.send({ from: FROM_ADDR, to, subject, html, text })
-    if (error) {
-      console.error('[Email:Resend] Send failed:', JSON.stringify(error))
-      throw new Error(error.message)
+  if (USE_BREVO) {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method:  'POST',
+      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+        to:          [{ email: to }],
+        subject,
+        htmlContent: html,
+        textContent: text,
+      }),
+    })
+    const body = await res.json()
+    if (!res.ok) {
+      console.error('[Email:Brevo] Send failed:', JSON.stringify(body))
+      throw new Error(body.message || 'Brevo send failed')
     }
-    console.log(`[Email:Resend] Sent OK → id: ${data?.id} | to: ${to}`)
+    console.log(`[Email:Brevo] Sent OK → messageId: ${body.messageId} | to: ${to}`)
     return
   }
-  // Dev fallback
-  const info = await devTransporter.sendMail({ from: FROM_ADDR, to, subject, html, text })
+  // Dev fallback — log to console
+  const info = await devTransporter.sendMail({
+    from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`, to, subject, html, text,
+  })
   if (info.message) {
     const parsed = JSON.parse(info.message)
     console.log(`[Email:DEV] To: ${to} | Subject: ${parsed.subject}`)
   }
 }
 
-if (USE_RESEND) {
-  console.log('[Email] Using Resend API — HTTP-based, Railway-compatible')
+if (USE_BREVO) {
+  console.log(`[Email] Using Brevo API — sender: ${SENDER_EMAIL}`)
 } else {
-  console.log('[Email] No RESEND_API_KEY — emails will be logged to console only (dev mode)')
+  console.log('[Email] No BREVO_API_KEY — emails logged to console only (dev mode)')
 }
 
 /**
