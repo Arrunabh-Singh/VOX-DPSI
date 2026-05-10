@@ -130,6 +130,18 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash)
     if (!match) return res.status(401).json({ error: 'Invalid credentials' })
 
+    // ── SKIP_OTP bypass — set in Railway env to disable OTP for demo/dev ─────
+    if (process.env.SKIP_OTP === 'true') {
+      const { password_hash: _ph, ...safeUser } = user
+      const token = jwt.sign(
+        { id: user.id, name: user.name, email: user.email, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+      setAuthCookie(res, token)
+      return res.json({ user: safeUser })
+    }
+
     // ── Generate and store login OTP ─────────────────────────────────────────
     const otp       = genOtp()
     const sessionId = randomUUID()
