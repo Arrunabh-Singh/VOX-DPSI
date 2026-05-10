@@ -144,14 +144,11 @@ router.post('/login', async (req, res) => {
       expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
     })
 
-    // ── Send OTP email ────────────────────────────────────────────────────────
+    // ── Send OTP email (fire-and-forget — don't block the login response) ──────
     const smtpConfigured = !!process.env.SMTP_HOST
-    try {
-      await sendLoginOtpEmail(user.email, user.name, otp)
-    } catch (emailErr) {
+    sendLoginOtpEmail(user.email, user.name, otp).catch(emailErr => {
       console.error('[OTP] Email send failed:', emailErr.message)
-      // Continue even if email fails — devOtp will show in response
-    }
+    })
 
     const response = {
       requiresOtp: true,
