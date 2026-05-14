@@ -6,6 +6,8 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 
 import authRoutes from './routes/auth.js'
+import { verifyToken } from './middleware/auth.js'
+import { allowRoles } from './middleware/roleGuard.js'
 import complaintRoutes from './routes/complaints.js'
 import timelineRoutes from './routes/timeline.js'
 import uploadRoutes from './routes/upload.js'
