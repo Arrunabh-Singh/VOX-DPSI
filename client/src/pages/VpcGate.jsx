@@ -136,7 +136,7 @@ export default function VpcGate({ children }) {
         sessionId: smsSessionId,
         otp: smsOtp
       })
-      if (data.vpc_status === 'approved') {
+      if (data.vpc_status === 'granted') {
         setVpcStatus('granted')
         setUser(prev => ({ ...prev, vpc_status: 'granted' }))
         toast.success('✅ Parental consent verified via SMS!')

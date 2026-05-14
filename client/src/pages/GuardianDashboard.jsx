@@ -93,7 +93,7 @@ export default function GuardianDashboard() {
             <div>
               <p className="text-sm font-semibold">Parental Consent Status</p>
               <p className={`text-xs ${vpcStatus === 'approved' ? 'text-green-700' : 'text-orange-700'}`}>
-                {vpcStatus === 'approved' ? '✓ Verified' : vpcStatus === 'pending' ? '⏳ Pending' : vpcStatus}
+                {vpcStatus === 'granted' ? '✓ Verified' : vpcStatus === 'pending' ? '⏳ Pending' : vpcStatus}
               </p>
             </div>
           </div>
