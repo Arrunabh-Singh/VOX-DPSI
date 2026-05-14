@@ -1,0 +1,30 @@
+# Render Deployment Configuration for Vox DPSI Backend
+# Place this in the repo root as render.yaml
+
+services:
+  - type: web
+    name: vox-dpsi-api
+    runtime: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: SUPABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: CLIENT_URL
+        value: https://vox-dpsi.vercel.app
+      - key: BREVO_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: SKIP_OTP
+        value: "true"  # Enable for demo, disable for production
+    autoDeploy: true
+    branch: main
