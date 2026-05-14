@@ -4,7 +4,7 @@
 
 -- 1. Add domain_expertise column (array of TEXT) to users table
 ALTER TABLE users
-  ADD COLUMN domain_expertise TEXT[];
+  ADD COLUMN IF NOT EXISTS domain_expertise TEXT[];
 
 -- 2. Seed Priya Verma (council@dpsi.com) with expertise in academics and personal
 -- Note: Uses the known UUID from seed data; adjust if your environment differs

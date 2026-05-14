@@ -81,6 +81,9 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
     if (description.length < 50) {
       return res.status(400).json({ error: 'Description must be at least 50 characters' })
     }
+    if (description.length > 5000) {
+      return res.status(400).json({ error: 'Description must be under 5000 characters' })
+    }
 
     // ── #4 Duplicate Detection ────────────────────────────────────────────────
     // If the student has an open complaint in the same domain within the last 7
@@ -944,6 +947,7 @@ router.patch('/:id/reopen', verifyToken, async (req, res) => {
       .from('complaints')
       .update({
         status: 'in_progress',
+        is_auto_escalated: false,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -975,47 +979,6 @@ router.patch('/:id/reopen', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Reopen error:', err)
     res.status(500).json({ error: 'Failed to reopen complaint' })
-  }
-})
-
-// PATCH /api/complaints/:id/feedback — student submits feedback after resolution
-router.patch('/:id/feedback', verifyToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'student') {
-      return res.status(403).json({ error: 'Only students can submit feedback' })
-    }
-    const { id } = req.params
-    const { rating, note } = req.body
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'Rating must be 1-5' })
-    }
-    const { data: complaint } = await supabase
-      .from('complaints')
-      .select('student_id, status, feedback_rating')
-      .eq('id', id)
-      .single()
-
-    if (!complaint || complaint.student_id !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-    if (complaint.status !== 'resolved') {
-      return res.status(400).json({ error: 'Can only rate resolved complaints' })
-    }
-    if (complaint.feedback_rating) {
-      return res.status(400).json({ error: 'Feedback already submitted' })
-    }
-
-    const { data, error } = await supabase
-      .from('complaints')
-      .update({ feedback_rating: rating, feedback_note: note || null, feedback_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    res.json({ success: true, data })
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to submit feedback' })
   }
 })
 
@@ -1950,7 +1913,7 @@ router.get('/:id/merge-candidates', verifyToken, async (req, res) => {
 
     let query = supabase
       .from('complaints')
-      .select('id, complaint_no, domain, status, description, created_at, student:users!complaints_student_id_fkey(name, section)')
+      .select('id, complaint_no, domain, status, description, created_at, is_anonymous_requested, identity_revealed, student:users!complaints_student_id_fkey(name, section)')
       .eq('domain', source.domain)
       .neq('id', id)
       .not('status', 'in', '("merged","resolved","closed","archived")')
@@ -1972,8 +1935,8 @@ router.get('/:id/merge-candidates', verifyToken, async (req, res) => {
       status: c.status,
       description: c.description?.slice(0, 120),
       created_at: c.created_at,
-      student_name: c.student?.name,
-      student_section: c.student?.section,
+      student_name: (c.is_anonymous_requested && !c.identity_revealed) ? 'Anonymous Student' : c.student?.name,
+      student_section: (c.is_anonymous_requested && !c.identity_revealed) ? null : c.student?.section,
     })))
   } catch (err) {
     console.error('[Merge Candidates] Error:', err)

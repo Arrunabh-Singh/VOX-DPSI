@@ -2,10 +2,9 @@
  * GET /api/audit-log
  * System-wide audit trail — principal, supervisor, coordinator, director
  *
- * Combines three event sources:
- *   • complaint_timeline  — all complaint actions (raise, verify, escalate, resolve…)
- *   • complaint_access_log — passive views of complaint detail pages
- *   • erasure_requests    — DPDP data erasure submissions + reviews
+ * Combines complaint_timeline events with DB-level pagination.
+ * For performance, we query each source separately with LIMIT/OFFSET
+ * rather than fetching all rows into memory.
  *
  * Query params:
  *   page         default 1
@@ -37,7 +36,8 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
     const dateFrom   = req.query.date_from  || ''
     const dateTo     = req.query.date_to    || ''
 
-    const events = []
+    let allEvents = []
+    let totalCount = 0
 
     // ── 1. complaint_timeline ──────────────────────────────────────────────────
     if (!eventType || eventType === 'timeline') {
@@ -53,10 +53,12 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
       if (roleFilter) q = q.eq('performed_by_role', roleFilter)
       if (dateFrom)   q = q.gte('created_at', dateFrom)
       if (dateTo)     q = q.lte('created_at', dateTo + 'T23:59:59Z')
+      if (search)     q = q.ilike('action', `%${search}%`)
 
-      const { data, error } = await q.range(0, 9999) // fetch all for unified sort
+      // Fetch only the page we need + a few extra for merging
+      const { data, error, count } = await q.range(offset, offset + limit - 1)
       if (!error && data) {
-        data.forEach(e => events.push({
+        data.forEach(e => allEvents.push({
           id:           `tl-${e.id}`,
           event_type:   'timeline',
           action:       e.action,
@@ -69,30 +71,30 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
           status:       e.complaint?.status || null,
           created_at:   e.created_at,
         }))
+        totalCount += (count || 0)
       }
     }
 
     // ── 2. complaint_access_log ────────────────────────────────────────────────
     if (!eventType || eventType === 'access') {
-      // Actual columns: accessed_by (FK → users), accessed_by_role, is_assigned_handler, created_at
       let q = supabase
         .from('complaint_access_log')
         .select(`
           id, accessed_by_role, created_at,
           viewer:accessed_by ( id, name, role ),
           complaint:complaint_id ( id, complaint_no, domain )
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
       if (dateFrom) q = q.gte('created_at', dateFrom)
       if (dateTo)   q = q.lte('created_at', dateTo + 'T23:59:59Z')
 
-      const { data, error } = await q.range(0, 4999)
+      const { data, error, count } = await q.range(offset, offset + limit - 1)
       if (!error && data) {
         data.forEach(e => {
           const viewerRole = e.accessed_by_role || e.viewer?.role || ''
           if (roleFilter && viewerRole !== roleFilter) return
-          events.push({
+          allEvents.push({
             id:           `ac-${e.id}`,
             event_type:   'access',
             action:       'Complaint viewed',
@@ -106,6 +108,7 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
             created_at:   e.created_at,
           })
         })
+        totalCount += (count || 0)
       }
     }
 
@@ -116,17 +119,17 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
         .select(`
           id, status, reason, reviewer_note, reviewed_at, created_at,
           requester:user_id ( id, name, role )
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
       if (dateFrom) q = q.gte('created_at', dateFrom)
       if (dateTo)   q = q.lte('created_at', dateTo + 'T23:59:59Z')
 
-      const { data, error } = await q.range(0, 999)
+      const { data, error, count } = await q.range(offset, offset + limit - 1)
       if (!error && data) {
         data.forEach(e => {
           if (roleFilter && e.requester?.role !== roleFilter) return
-          events.push({
+          allEvents.push({
             id:           `er-${e.id}`,
             event_type:   'erasure',
             action:       `Data erasure request — ${e.status}`,
@@ -139,9 +142,8 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
             status:       e.status,
             created_at:   e.created_at,
           })
-          // Also log the review event if present
           if (e.reviewed_at) {
-            events.push({
+            allEvents.push({
               id:           `er-rev-${e.id}`,
               event_type:   'erasure',
               action:       `Erasure request reviewed — ${e.status}`,
@@ -156,26 +158,27 @@ router.get('/', verifyToken, allowRoles(...ALLOWED), async (req, res) => {
             })
           }
         })
+        totalCount += (count || 0)
       }
     }
 
-    // ── Sort all events desc by created_at ─────────────────────────────────────
-    events.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    // ── Sort merged events desc by created_at ───────────────────────────────────
+    allEvents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
-    // ── Apply search filter ────────────────────────────────────────────────────
+    // ── Apply search filter (for cross-source search) ───────────────────────────
     const searchLower = search.toLowerCase()
     const filtered = search
-      ? events.filter(e =>
+      ? allEvents.filter(e =>
           e.action?.toLowerCase().includes(searchLower) ||
           e.complaint_no?.toLowerCase().includes(searchLower) ||
           e.actor_name?.toLowerCase().includes(searchLower) ||
           e.note?.toLowerCase().includes(searchLower)
         )
-      : events
+      : allEvents
 
-    // ── Paginate ───────────────────────────────────────────────────────────────
+    // ── Paginate ────────────────────────────────────────────────────────────────
     const total    = filtered.length
-    const paginated = filtered.slice(offset, offset + limit)
+    const paginated = filtered.slice(0, limit)
 
     res.json({
       events: paginated,
