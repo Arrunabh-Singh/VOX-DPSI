@@ -761,12 +761,13 @@ router.get('/erasure-request', verifyToken, async (req, res) => {
 
 // Simple server-rendered HTML page shown to parents after clicking consent link
 function vpcPage(title, message, success) {
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
   const color = success ? '#16A34A' : '#DC2626'
   const icon  = success ? '✅' : '⚠️'
   return `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} — Vox DPSI</title>
+<title>${esc(title)} — Vox DPSI</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   body{font-family:Inter,Arial,sans-serif;background:#f5f7fa;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -784,8 +785,8 @@ function vpcPage(title, message, success) {
   <div class="logo">VOX DPSI</div>
   <div class="school">Delhi Public School Indore</div>
   <div class="icon">${icon}</div>
-  <h1>${title}</h1>
-  <p>${message}</p>
+  <h1>${esc(title)}</h1>
+  <p>${esc(message)}</p>
   <p class="footer">If you have questions, contact us at <a href="mailto:principal@dpsi.edu.in" style="color:#003366">principal@dpsi.edu.in</a></p>
 </div>
 </body></html>`
