@@ -38,6 +38,7 @@ import PrincipalDashboard from './pages/PrincipalDashboard'
 import SupervisorDashboard from './pages/SupervisorDashboard'
 import VicePrincipalDashboard from './pages/VicePrincipalDashboard'
 import LoadingSpinner from './components/LoadingSpinner'
+import ErrorBoundary from './components/ErrorBoundary'
 import PrivacyNoticeGate from './components/PrivacyNoticeGate'
  import VpcGate from './pages/VpcGate'
  import VpcVerify from './pages/VpcVerify'
@@ -93,12 +94,13 @@ function OnboardingGate({ children }) {
 
 export default function App() {
   return (
-    <LanguageProvider>
-    <AuthProvider>
-      <BrowserRouter>
-        <KeepAlive />
-        <SessionGuard />
-        <Toaster
+    <ErrorBoundary>
+      <LanguageProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <KeepAlive />
+          <SessionGuard />
+          <Toaster
           position="top-right"
           toastOptions={{
             duration: 3000,
@@ -130,5 +132,6 @@ export default function App() {
       </BrowserRouter>
     </AuthProvider>
     </LanguageProvider>
+    </ErrorBoundary>
   )
 }
