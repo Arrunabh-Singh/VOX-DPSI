@@ -8,7 +8,7 @@ const router = express.Router({ mergeParams: true })
 const STAFF_ROLES = ['council_member', 'class_teacher', 'coordinator', 'principal', 'supervisor']
 
 // GET /api/complaints/:id/notes — get internal notes for a complaint
-router.get('/', verifyToken, allowRoles(STAFF_ROLES), async (req, res) => {
+router.get('/', verifyToken, allowRoles(...STAFF_ROLES), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('internal_notes')
@@ -24,7 +24,7 @@ router.get('/', verifyToken, allowRoles(STAFF_ROLES), async (req, res) => {
 })
 
 // POST /api/complaints/:id/notes — add an internal note
-router.post('/', verifyToken, allowRoles(STAFF_ROLES), async (req, res) => {
+router.post('/', verifyToken, allowRoles(...STAFF_ROLES), async (req, res) => {
   const { note } = req.body
   if (!note || note.trim().length < 3) return res.status(400).json({ error: 'Note must be at least 3 characters' })
 

@@ -114,7 +114,7 @@ app.use('/api/safe-dialogue', safeDialogueRoutes)
 app.use('/api/guardian', guardianRoutes)
 app.use('/api/config', configRoutes)
 
-app.get('/api/test-whatsapp', async (req, res) => {
+app.get('/api/test-whatsapp', verifyToken, allowRoles('principal', 'vice_principal'), async (req, res) => {
   const { notifyAdminAlert } = await import('./services/notifications.js')
   const adminWA = process.env.ADMIN_WHATSAPP_NUMBER
   if (!adminWA) return res.json({ ok: false, reason: 'ADMIN_WHATSAPP_NUMBER not set' })

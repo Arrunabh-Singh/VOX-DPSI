@@ -122,6 +122,19 @@ CREATE INDEX IF NOT EXISTS idx_complaints_council_member_id ON complaints(assign
 CREATE INDEX IF NOT EXISTS idx_complaints_current_handler_role ON complaints(current_handler_role);
 CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
 CREATE INDEX IF NOT EXISTS idx_complaints_created_at ON complaints(created_at DESC);
+
+-- Notifications table (missing from original schema)
+CREATE TABLE IF NOT EXISTS notifications (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title       TEXT NOT NULL,
+  body        TEXT,
+  type        TEXT DEFAULT 'status_change',
+  complaint_id UUID REFERENCES complaints(id) ON DELETE CASCADE,
+  is_read     BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_complaint_timeline_complaint_id ON complaint_timeline(complaint_id);

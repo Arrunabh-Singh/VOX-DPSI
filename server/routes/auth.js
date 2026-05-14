@@ -107,7 +107,7 @@ router.post('/register', async (req, res) => {
     )
 
     setAuthCookie(res, token)
-    res.status(201).json({ token, user }) // token also in body for dev tooling
+    res.status(201).json({ user })
   } catch (err) {
     console.error('Register error:', err)
     res.status(500).json({ error: 'Registration failed' })
@@ -660,10 +660,10 @@ router.post('/vpc-otp-verify', verifyToken, async (req, res) => {
     // Grant VPC
     await supabase
       .from('users')
-      .update({ vpc_status: 'approved' })
+      .update({ vpc_status: 'granted' })
       .eq('id', req.user.id)
 
-    res.json({ ok: true, vpc_status: 'approved' })
+    res.json({ ok: true, vpc_status: 'granted' })
   } catch (err) {
     console.error('VPC OTP verify error:', err)
     res.status(500).json({ error: 'Verification failed' })

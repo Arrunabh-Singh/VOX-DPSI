@@ -159,10 +159,11 @@ const STATUS_LABELS = {
  * @param {string} studentEmail
  * @param {string} studentName
  * @param {string} complaintNo  — formatted VOX-XXX
- * @param {string} newStatus
+ * @param {string} complaintNo  — formatted VOX-XXX
  * @param {string|null} note    — optional resolution note
+ * @param {string|null} complaintId — UUID for the complaint detail link
  */
-export async function sendStatusChangeEmail(studentEmail, studentName, complaintNo, newStatus, note = null) {
+export async function sendStatusChangeEmail(studentEmail, studentName, complaintNo, newStatus, note = null, complaintId = null) {
   const meta = STATUS_LABELS[newStatus]
   if (!meta) return // don't send email for non-key statuses
 
@@ -193,7 +194,7 @@ export async function sendStatusChangeEmail(studentEmail, studentName, complaint
     </div>` : ''}
 
     <div style="text-align:center;margin-top:24px">
-      <a href="${clientBase}/complaints/${complaintNo}" style="display:inline-block;background:#003366;color:#FFD700;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
+      <a href="${clientBase}/complaints/${complaintId || complaintNo}" style="display:inline-block;background:#003366;color:#FFD700;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
         View My Complaint →
       </a>
     </div>

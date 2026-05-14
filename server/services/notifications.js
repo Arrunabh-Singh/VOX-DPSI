@@ -87,7 +87,7 @@ export async function notifyStatusChange(studentId, complaintNo, oldStatus, newS
       .eq('id', studentId)
       .single()
     if (student?.email) {
-      sendStatusChangeEmail(student.email, student.name, complaintNo, newStatus).catch(err => {
+      sendStatusChangeEmail(student.email, student.name, complaintNo, newStatus, null, complaintId).catch(err => {
         console.warn(`[Email:Status] Failed for ${complaintNo}:`, err.message)
       })
     }

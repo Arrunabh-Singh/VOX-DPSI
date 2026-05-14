@@ -588,6 +588,15 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Status transition not allowed for your role' })
     }
 
+    // BOLA/IDOR fix: council_member can only update their own assigned complaints
+    if (role === 'council_member') {
+      const { data: check } = await supabase
+        .from('complaints').select('assigned_council_member_id').eq('id', id).single()
+      if (check?.assigned_council_member_id !== userId) {
+        return res.status(403).json({ error: 'Not assigned to this complaint' })
+      }
+    }
+
     const { data, error } = await supabase
       .from('complaints')
       .update({ status, updated_at: new Date().toISOString() })
@@ -624,6 +633,15 @@ router.patch('/:id/resolve', verifyToken, async (req, res) => {
     const allowedRoles = ['council_member', 'class_teacher', 'coordinator', 'principal', 'vice_principal', 'director', 'board_member']
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({ error: 'Not allowed' })
+    }
+
+    // BOLA/IDOR fix: council_member can only resolve their own assigned complaints
+    if (role === 'council_member') {
+      const { data: check } = await supabase
+        .from('complaints').select('assigned_council_member_id').eq('id', id).single()
+      if (check?.assigned_council_member_id !== userId) {
+        return res.status(403).json({ error: 'Not assigned to this complaint' })
+      }
     }
 
     // Anti-powerplay: check if resolved suspiciously fast (< 30 minutes from raise)
@@ -691,6 +709,15 @@ router.patch('/:id/escalate', verifyToken, async (req, res) => {
 
     if (!escalationMap[role] || !escalationMap[role].includes(escalate_to)) {
       return res.status(403).json({ error: 'Invalid escalation target for your role' })
+    }
+
+    // BOLA/IDOR fix: council_member can only escalate their own assigned complaints
+    if (role === 'council_member') {
+      const { data: check } = await supabase
+        .from('complaints').select('assigned_council_member_id').eq('id', id).single()
+      if (check?.assigned_council_member_id !== userId) {
+        return res.status(403).json({ error: 'Not assigned to this complaint' })
+      }
     }
 
     const handlerRoleMap = {
@@ -1677,7 +1704,6 @@ router.post('/:id/feedback', verifyToken, async (req, res) => {
         student_id: req.user.id,
         rating: parseInt(rating, 10),
         comment: comment?.slice(0, 500) || null,
-        submitted_at: new Date().toISOString(),
       }, { onConflict: 'complaint_id' })
       .select()
       .single()

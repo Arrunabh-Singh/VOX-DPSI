@@ -8,6 +8,21 @@ const router = express.Router({ mergeParams: true })
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { id } = req.params
+    const { role, id: userId } = req.user
+
+    // Access control: verify user is authorized to view this complaint
+    const { data: complaint } = await supabase
+      .from('complaints').select('student_id, assigned_council_member_id').eq('id', id).single()
+    if (!complaint) return res.status(404).json({ error: 'Complaint not found' })
+
+    const HIGH_ROLES = ['supervisor','principal','vice_principal','coordinator','class_teacher','director','board_member']
+    if (role === 'student' && complaint.student_id !== userId) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    if (role === 'council_member' && complaint.assigned_council_member_id !== userId) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
     const { data, error } = await supabase
       .from('complaint_timeline')
       .select(`
