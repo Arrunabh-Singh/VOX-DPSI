@@ -178,6 +178,13 @@ app.listen(PORT, () => {
   startRetentionCron()
   startTermExpiryCron()
   startDailyDigestCron()
+
+  // Self-ping to prevent Render free tier sleep (spins down after 15 min)
+  if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+    setInterval(() => {
+      fetch(process.env.RENDER_EXTERNAL_URL + '/api/health').catch(() => {})
+    }, 5 * 60 * 1000)
+  }
 })
 
 export default app
