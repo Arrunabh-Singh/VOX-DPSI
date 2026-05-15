@@ -22,6 +22,13 @@ export function AuthProvider({ children }) {
   })
 
   useEffect(() => {
+    // Skip auth check on public pages to avoid 401 console errors
+    const publicPaths = ['/login', '/register', '/vpc-verify', '/']
+    if (publicPaths.includes(window.location.pathname)) {
+      setLoading(false)
+      return
+    }
+
     // Short-circuit: if we verified auth recently (< 5 min), trust localStorage cache
     const lastVerified = parseInt(localStorage.getItem('vox_auth_time') || '0', 10)
     const isFresh = Date.now() - lastVerified < 5 * 60 * 1000

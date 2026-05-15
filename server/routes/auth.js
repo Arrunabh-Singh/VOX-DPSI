@@ -162,7 +162,7 @@ router.post('/login', async (req, res) => {
     })
 
     // ── Send OTP email ────────────────────────────────────────────────────────
-    const emailConfigured = !!process.env.RESEND_API_KEY
+    const emailConfigured = !!process.env.RESEND_API_KEY || !!process.env.BREVO_API_KEY
     try {
       await sendLoginOtpEmail(user.email, user.name, otp)
     } catch (emailErr) {
@@ -172,6 +172,18 @@ router.post('/login', async (req, res) => {
         return res.status(500).json({
           error: 'Could not send the verification email. Please try again in a moment.',
         })
+      }
+      // Email not configured — in production, auto-skip OTP so login still works
+      if (process.env.NODE_ENV === 'production') {
+        console.log('[OTP] Email not configured in production — auto-skipping OTP')
+        const { password_hash: _ph2, ...safeUser2 } = user
+        const token2 = jwt.sign(
+          { id: user.id, name: user.name, email: user.email, role: user.role, scholar_no: user.scholar_no, section: user.section, house: user.house },
+          process.env.JWT_SECRET,
+          { expiresIn: '7d' }
+        )
+        setAuthCookie(res, token2)
+        return res.json({ user: safeUser2 })
       }
     }
 

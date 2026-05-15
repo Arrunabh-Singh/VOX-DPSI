@@ -17,7 +17,9 @@ api.interceptors.response.use(
       localStorage.removeItem('vox_user')
       localStorage.removeItem('vox_auth_time')
       // The HttpOnly cookie was already rejected by the server; redirect to login
-      if (window.location.pathname !== '/login') {
+      // But don't redirect if we're already on a public page
+      const publicPaths = ['/login', '/register', '/vpc-verify', '/']
+      if (!publicPaths.includes(window.location.pathname)) {
         window.location.href = '/login'
       }
     }

@@ -23,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
+  const [loginError, setLoginError] = useState('')  // visible error message in DOM
 
   // Step 2 (OTP) state
   const [step, setStep]             = useState(1)    // 1 = credentials, 2 = OTP
@@ -55,6 +56,7 @@ export default function Login() {
     const finalPass  = passOverride  || password
     if (!finalEmail || !finalPass) return toast.error('Please enter email and password')
     setLoading(true)
+    setLoginError('')  // clear previous error
     try {
       const { data } = await api.post('/api/auth/login', { email: finalEmail, password: finalPass })
 
@@ -66,11 +68,15 @@ export default function Login() {
         setCountdown(30) // 30 second resend cooldown
         if (!data.devOtp) toast.success(`OTP sent to ${data.maskedEmail}`)
       } else {
-        // Shouldn't happen, but handle gracefully
+        // SKIP_OTP mode — server already set the JWT cookie, fetch user profile
+        toast.success(`Welcome, ${data.user.name}!`)
+        if (loginWithCookie) await loginWithCookie()
         navigate('/')
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Login failed. Check your credentials.')
+      const errMsg = err.response?.data?.error || 'Login failed. Check your credentials.'
+      toast.error(errMsg)
+      setLoginError(errMsg)
     } finally {
       setLoading(false)
     }
@@ -121,6 +127,7 @@ export default function Login() {
     setDevOtp('')
     setSessionId('')
     setMaskedEmail('')
+    setLoginError('')
   }
 
   const submitOtp = async (otpStr) => {
@@ -274,6 +281,13 @@ export default function Login() {
                   ) : 'Continue →'}
                 </button>
               </form>
+
+              {/* Visible error message — rendered in DOM for accessibility and testability */}
+              {loginError && (
+                <div id="login-error" role="alert" style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '600' }}>
+                  ⚠️ {loginError}
+                </div>
+              )}
             </div>
 
             {/* Quick Login */}
