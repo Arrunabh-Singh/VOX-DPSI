@@ -1989,8 +1989,8 @@ router.get('/:id/merge-candidates', verifyToken, async (req, res) => {
       status: c.status,
       description: c.description?.slice(0, 120),
       created_at: c.created_at,
-      student_name: (c.is_anonymous_requested && !c.identity_revealed) ? 'Anonymous Student' : c.student?.name,
-      student_section: (c.is_anonymous_requested && !c.identity_revealed) ? null : c.student?.section,
+      student_name: (c.is_anonymous_requested && !c.identity_revealed && req.user.role !== 'council_member') ? 'Anonymous Student' : c.student?.name,
+      student_section: (c.is_anonymous_requested && !c.identity_revealed && req.user.role !== 'council_member') ? null : c.student?.section,
     })))
   } catch (err) {
     console.error('[Merge Candidates] Error:', err)
@@ -2186,24 +2186,26 @@ router.post('/:id/consensus-vote', verifyToken, async (req, res) => {
       note:              note || `Voted to ${vote} the proposed resolution. Current tally: ${approveCount} approve / ${rejectCount} reject (${CONSENSUS_QUORUM} needed).`,
     })
 
-    // Check for quorum resolution
+    // Check for quorum resolution — guard against race conditions with .eq('consensus_status','voting')
     if (approveCount >= CONSENSUS_QUORUM) {
-      // Auto-resolve the complaint
-      await supabase.from('complaints').update({
-        status:          'resolved',
+      const { data: resolvedRow } = await supabase.from('complaints').update({
+        status:           'resolved',
         consensus_status: 'approved',
-        updated_at:      new Date().toISOString(),
-      }).eq('id', id)
+        updated_at:       new Date().toISOString(),
+      }).eq('id', id).eq('consensus_status', 'voting').select('id').single()
 
-      await supabase.from('complaint_timeline').insert({
-        complaint_id:      id,
-        action:            `✅ Complaint resolved by consensus (${approveCount}/${totalVotes} approved)`,
-        performed_by:      null,
-        performed_by_role: 'system',
-        note:              complaint.consensus_resolution_note
-          ? `Resolution: ${complaint.consensus_resolution_note}`
-          : `Consensus quorum reached. Resolved automatically.`,
-      })
+      // If resolvedRow is null, a concurrent vote already resolved it — skip duplicate timeline
+      if (resolvedRow) {
+        await supabase.from('complaint_timeline').insert({
+          complaint_id:      id,
+          action:            `✅ Complaint resolved by consensus (${approveCount}/${totalVotes} approved)`,
+          performed_by:      null,
+          performed_by_role: 'system',
+          note:              complaint.consensus_resolution_note
+            ? `Resolution: ${complaint.consensus_resolution_note}`
+            : `Consensus quorum reached. Resolved automatically.`,
+        })
+      }
 
       return res.json({
         message: `Quorum reached (${approveCount}/${CONSENSUS_QUORUM}) — complaint resolved`,
@@ -2215,18 +2217,20 @@ router.post('/:id/consensus-vote', verifyToken, async (req, res) => {
 
     // If majority reject (impossible to reach quorum), cancel consensus
     if (rejectCount >= CONSENSUS_QUORUM) {
-      await supabase.from('complaints').update({
+      const { data: rejectedRow } = await supabase.from('complaints').update({
         consensus_status: 'rejected',
         updated_at:       new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('consensus_status', 'voting').select('id').single()
 
-      await supabase.from('complaint_timeline').insert({
-        complaint_id:      id,
-        action:            `❌ Consensus rejected — resolution not approved by peers`,
-        performed_by:      null,
-        performed_by_role: 'system',
-        note:              `${rejectCount} council members voted to reject. Complaint returns to in_progress.`,
-      })
+      if (rejectedRow) {
+        await supabase.from('complaint_timeline').insert({
+          complaint_id:      id,
+          action:            `❌ Consensus rejected — resolution not approved by peers`,
+          performed_by:      null,
+          performed_by_role: 'system',
+          note:              `${rejectCount} council members voted to reject. Complaint returns to in_progress.`,
+        })
+      }
 
       return res.json({
         message: 'Consensus rejected — complaint returned to in_progress',

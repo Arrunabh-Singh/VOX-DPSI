@@ -592,7 +592,6 @@ router.post('/vpc-otp-request', verifyToken, async (req, res) => {
       const result = await sendSmsOtp(phone)
       otp = result.otp
     } else {
-      const { randomInt } = await import('crypto')
       otp = randomInt(100000, 1000000).toString()
       console.log(`[VPC-SMS-DEV] OTP for 91${phone}: ${otp}`)
     }

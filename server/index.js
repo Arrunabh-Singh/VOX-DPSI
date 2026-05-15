@@ -80,6 +80,33 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }))
+
+// CSRF protection via Origin header check for state-changing requests.
+// Browsers always send Origin on cross-origin requests; SameSite=None cookies
+// require this explicit check since they're sent to any origin.
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
+  const allowed = process.env.CLIENT_URL || 'http://localhost:5173'
+  const origin  = req.headers.origin || req.headers.referer
+  if (!origin) {
+    // Reject missing Origin in production; allow in dev for curl/Postman testing
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'CSRF check failed: missing origin' })
+    }
+    return next()
+  }
+  try {
+    const requestOrigin = new URL(origin).origin
+    const allowedOrigin = new URL(allowed).origin
+    if (requestOrigin !== allowedOrigin) {
+      return res.status(403).json({ error: 'CSRF check failed' })
+    }
+  } catch {
+    return res.status(403).json({ error: 'CSRF check failed: malformed origin' })
+  }
+  next()
+})
+
 app.use(cookieParser())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
