@@ -16,6 +16,7 @@ import notificationRoutes from './routes/notifications.js'
 import notesRoutes from './routes/notes.js'
 import suggestionRoutes from './routes/suggestions.js'
 import auditLogRoutes from './routes/auditLog.js'
+import registerAdminFixRoutes from './routes/adminFix.js'
 import workflowTemplateRoutes from './routes/workflowTemplates.js'
 import resolutionTemplateRoutes from './routes/resolutionTemplates.js'
 import delegationRoutes from './routes/delegations.js'
@@ -172,6 +173,9 @@ app.get(['/health', '/api/health'], (req, res) => {
     version: '2.0.0'
   })
 })
+
+// TEMPORARY: Admin fix endpoint — remove after use
+registerAdminFixRoutes(app)
 
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }))
 
