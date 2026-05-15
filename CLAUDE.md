@@ -35,7 +35,7 @@ Student grievance management PWA for DPS Indore. Students file complaints → co
 | class_teacher | teacher@dpsi.com | TeacherDashboard | Escalated-to-teacher |
 | coordinator | coordinator@dpsi.com | CoordinatorDashboard | All coordinator-level |
 | principal | principal@dpsi.com | PrincipalDashboard | Full view + CSV export |
-| vice_principal | — | VicePrincipalDashboard | Same as principal |
+| vice_principal | vp@dpsi.com | VicePrincipalDashboard | Same as principal |
 | board_member | — | SupervisorDashboard | Read-only |
 
 **All demo passwords:** `demo123`
