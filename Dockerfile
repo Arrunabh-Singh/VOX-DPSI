@@ -1,15 +1,15 @@
 # Dockerfile for Vox DPSI Backend
-# Alternative to render.yaml — works on any Docker-compatible host
+# Works with Render docker runtime (dockerCommand: cd server && node index.js)
 
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy server files
-COPY server/package*.json ./
-RUN npm ci --only=production
+# Copy server files into server/ subdirectory
+COPY server/package*.json ./server/
+RUN cd server && npm ci --only=production
 
-COPY server/ ./
+COPY server/ ./server/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -22,4 +22,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
+# Default CMD (overridden by Render dockerCommand)
 CMD ["node", "index.js"]
