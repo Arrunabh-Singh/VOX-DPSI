@@ -162,13 +162,13 @@ router.post('/login', async (req, res) => {
     })
 
     // ── Send OTP email ────────────────────────────────────────────────────────
-    const smtpConfigured = !!process.env.SMTP_HOST
+    const emailConfigured = !!process.env.RESEND_API_KEY
     try {
       await sendLoginOtpEmail(user.email, user.name, otp)
     } catch (emailErr) {
       console.error('[OTP] Email send failed:', emailErr.message)
       loginOtpStore.delete(sessionId) // clean up orphaned session
-      if (smtpConfigured) {
+      if (emailConfigured) {
         return res.status(500).json({
           error: 'Could not send the verification email. Please try again in a moment.',
         })
@@ -181,10 +181,10 @@ router.post('/login', async (req, res) => {
       maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2'),
     }
 
-    // In dev (no SMTP) expose OTP so demo still works
-    if (!smtpConfigured && process.env.NODE_ENV !== 'production') {
+    // In dev (no email) expose OTP so demo still works
+    if (!emailConfigured && process.env.NODE_ENV !== 'production') {
       response.devOtp = otp
-      response.devNote = 'SMTP not configured — OTP shown here for development only'
+      response.devNote = 'Email not configured — OTP shown here for development only'
     }
 
     res.json(response)
@@ -276,11 +276,11 @@ router.post('/resend-login-otp', async (req, res) => {
     session.expiresAt = Date.now() + 10 * 60 * 1000
     session.attempts  = 0 // reset attempt count on fresh OTP
 
-    const smtpConfigured = !!process.env.SMTP_HOST
+    const emailConfigured = !!process.env.RESEND_API_KEY
     try { await sendLoginOtpEmail(user.email, user.name, otp) } catch {}
 
     const response = { ok: true, maskedEmail: user.email.replace(/(.{2}).+(@.+)/, '$1***$2') }
-    if (!smtpConfigured && process.env.NODE_ENV !== 'production') { response.devOtp = otp; response.devNote = 'SMTP not configured' }
+    if (!emailConfigured && process.env.NODE_ENV !== 'production') { response.devOtp = otp; response.devNote = 'Email not configured' }
     res.json(response)
   } catch (err) {
     res.status(500).json({ error: 'Failed to resend OTP' })

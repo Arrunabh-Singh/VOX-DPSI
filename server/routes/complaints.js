@@ -600,6 +600,29 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       }
     }
 
+    // BOLA: class_teacher can only update complaints currently at their level
+    if (role === 'class_teacher') {
+      const { data: check } = await supabase
+        .from('complaints').select('current_handler_role').eq('id', id).single()
+      if (check?.current_handler_role !== 'class_teacher') {
+        return res.status(403).json({ error: 'This complaint is not at your level' })
+      }
+    }
+
+    // BOLA: coordinator can only update complaints currently at their level
+    if (role === 'coordinator') {
+      const { data: check } = await supabase
+        .from('complaints').select('current_handler_role').eq('id', id).single()
+      if (check?.current_handler_role !== 'coordinator') {
+        return res.status(403).json({ error: 'This complaint is not at your level' })
+      }
+    }
+
+    // Fetch current status before update so we can pass the correct oldStatus to notify
+    const { data: prevData } = await supabase
+      .from('complaints').select('status').eq('id', id).single()
+    const previousStatus = prevData?.status || null
+
     const { data, error } = await supabase
       .from('complaints')
       .update({ status, updated_at: new Date().toISOString() })
@@ -618,7 +641,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
     })
 
     // Notify student of the status change
-    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), 'previous', status, id)
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), previousStatus, status, id)
 
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
@@ -689,7 +712,7 @@ router.patch('/:id/resolve', verifyToken, async (req, res) => {
     await supabase.from('complaint_timeline').insert(timelineEntries)
 
     // Notify student of resolution
-    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), data.status, 'resolved', id)
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), existing.status, 'resolved', id)
 
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {
