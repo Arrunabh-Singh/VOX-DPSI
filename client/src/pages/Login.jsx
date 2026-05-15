@@ -228,7 +228,7 @@ export default function Login() {
                 {t('common.poweredBy')}
               </p>
 
-              <form onSubmit={doLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <form onSubmit={doLogin} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', color: '#555', fontSize: '12px', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {t('auth.email')}
@@ -236,7 +236,7 @@ export default function Login() {
                   <input
                     type="email" value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="you@dpsindore.org" required
+                    placeholder="you@dpsindore.org"
                     style={{ width: '100%', background: '#fff', border: '1px solid rgba(45,92,38,0.25)', borderRadius: '10px', padding: '12px 14px', color: '#1a1a1a', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                     onFocus={e => e.target.style.borderColor = NAV}
                     onBlur={e => e.target.style.borderColor = 'rgba(45,92,38,0.25)'}
@@ -251,7 +251,7 @@ export default function Login() {
                     <input
                       type={showPass ? 'text' : 'password'} value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••" required
+                      placeholder="••••••••"
                       style={{ width: '100%', background: '#fff', border: '1px solid rgba(45,92,38,0.25)', borderRadius: '10px', padding: '12px 46px 12px 14px', color: '#1a1a1a', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                       onFocus={e => e.target.style.borderColor = NAV}
                       onBlur={e => e.target.style.borderColor = 'rgba(45,92,38,0.25)'}
