@@ -14,7 +14,12 @@ export function AuthProvider({ children }) {
       return stored ? JSON.parse(stored) : null
     } catch { return null }
   })
-  const [loading, setLoading] = useState(true)
+  // Only show loading spinner if we have a cached session to validate
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !!localStorage.getItem('vox_user')
+    } catch { return false }
+  })
 
   useEffect(() => {
     // Short-circuit: if we verified auth recently (< 5 min), trust localStorage cache

@@ -155,6 +155,14 @@ app.get('/api/test-whatsapp', verifyToken, allowRoles('principal', 'vice_princip
   }
 })
 
+// Self-ping to prevent Render free tier sleep
+if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+  setInterval(() => {
+    fetch(process.env.RENDER_EXTERNAL_URL + '/api/health').catch(() => {})
+  }, 5 * 60 * 1000)
+  console.log('[SelfPing] Enabled — pinging every 5 minutes')
+}
+
 app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
