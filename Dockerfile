@@ -1,11 +1,11 @@
 # Dockerfile for Vox DPSI Backend
-# Works with Render docker runtime (dockerCommand: cd server && node index.js)
+# Render docker runtime — dockerCommand: cd server && node index.js
 
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy server files into server/ subdirectory
+# Copy server files to /app/server/
 COPY server/package*.json ./server/
 RUN cd server && npm ci --only=production
 
@@ -19,8 +19,6 @@ USER nodeuser
 
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
-
-# Default CMD (overridden by Render dockerCommand)
+# Entrypoint that changes to server dir and runs the app
+WORKDIR /app/server
 CMD ["node", "index.js"]
