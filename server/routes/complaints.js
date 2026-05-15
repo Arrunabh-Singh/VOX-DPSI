@@ -78,10 +78,11 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
     if (!domain || !description) {
       return res.status(400).json({ error: 'domain and description are required' })
     }
-    if (description.length < 50) {
+    const trimmedDescription = description.trim()
+    if (trimmedDescription.length < 50) {
       return res.status(400).json({ error: 'Description must be at least 50 characters' })
     }
-    if (description.length > 5000) {
+    if (trimmedDescription.length > 5000) {
       return res.status(400).json({ error: 'Description must be under 5000 characters' })
     }
 
@@ -116,7 +117,7 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
     }
 
     // ── Keyword urgency detection ─────────────────────────────────────────────
-    const detectedKeyword = detectUrgency(description)
+    const detectedKeyword = detectUrgency(trimmedDescription)
     let priority = requestedPriority === 'urgent' ? 'urgent' : 'normal'
     let autoFlagged = false
     if (detectedKeyword && priority !== 'urgent') {
@@ -128,7 +129,7 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
     // If the description contains POSH/POCSO keywords, the complaint MUST bypass
     // all student handlers and route directly to the coordinator + Internal Committee.
     // Council members are completely excluded from POSH/POCSO complaints.
-    const poshCheck = detectPoshPocso(description)
+    const poshCheck = detectPoshPocso(trimmedDescription)
     const isPoshPocso = !!poshCheck
     if (isPoshPocso) priority = 'urgent' // POSH/POCSO is always urgent
 
@@ -205,7 +206,7 @@ router.post('/', verifyToken, complaintCreateLimiter, async (req, res) => {
     const insertPayload = {
       student_id: req.user.id,
       domain,
-      description,
+      description: trimmedDescription,
       priority,
       is_anonymous_requested: !!is_anonymous_requested,
       attachment_url: attachment_url || null,
@@ -539,33 +540,63 @@ router.patch('/:id/verify', verifyToken, async (req, res) => {
     const { id } = req.params
     const { note } = req.body
 
+    // Fetch complaint to check POSH/POCSO flag before setting status
+    const { data: existing, error: fetchErr } = await supabase
+      .from('complaints')
+      .select('is_posh_pocso, student_id, complaint_no')
+      .eq('id', id)
+      .eq('assigned_council_member_id', req.user.id)
+      .single()
+
+    if (fetchErr || !existing) return res.status(404).json({ error: 'Complaint not found or not assigned to you' })
+
+    // POSH/POCSO complaints skip 'verified' and go directly to 'in_progress'
+    // routed to coordinator, bypassing the normal council workflow.
+    const newStatus = existing.is_posh_pocso ? 'in_progress' : 'verified'
+    const extraFields = existing.is_posh_pocso
+      ? { current_handler_role: 'coordinator', assigned_council_member_id: null }
+      : {}
+
     const slaDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const { data, error } = await supabase
       .from('complaints')
       .update({
-        status: 'verified',
+        status: newStatus,
         updated_at: new Date().toISOString(),
         sla_deadline: slaDeadline,
-        // PII masking: unlock full description for this specific council member
         description_unlocked_for: req.user.id,
+        ...extraFields,
       })
       .eq('id', id)
-      .eq('assigned_council_member_id', req.user.id)
       .select()
       .single()
 
     if (error || !data) return res.status(404).json({ error: 'Complaint not found or not assigned to you' })
 
-    await supabase.from('complaint_timeline').insert({
+    const timelineEntries = [{
       complaint_id: id,
-      action: 'Verified in person',
+      action: existing.is_posh_pocso
+        ? '🔴 POSH/POCSO: Verified in person — auto-routed to Coordinator (in_progress)'
+        : 'Verified in person',
       performed_by: req.user.id,
       performed_by_role: 'council_member',
       note: note || 'Council member verified the complaint in person.',
-    })
+    }]
+
+    if (existing.is_posh_pocso) {
+      timelineEntries.push({
+        complaint_id: id,
+        action: '🔴 POSH/POCSO protocol: council bypass applied on verification',
+        performed_by: null,
+        performed_by_role: 'system',
+        note: 'Complaint flagged POSH/POCSO — skipped verified status, moved directly to in_progress under coordinator.',
+      })
+    }
+
+    await supabase.from('complaint_timeline').insert(timelineEntries)
 
     // Notify student
-    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), 'raised', 'verified', id)
+    notifyStatusChange(data.student_id, formatComplaintNo(data.complaint_no), 'raised', newStatus, id)
 
     res.json({ ...data, complaint_no_display: formatComplaintNo(data.complaint_no) })
   } catch (err) {

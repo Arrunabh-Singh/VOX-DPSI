@@ -16,9 +16,6 @@ import nodemailer from 'nodemailer'
 const USE_RESEND    = !!process.env.RESEND_API_KEY
 const resend        = USE_RESEND ? new Resend(process.env.RESEND_API_KEY) : null
 const OVERRIDE_TO   = process.env.RESEND_OVERRIDE_TO
-if (USE_RESEND && !OVERRIDE_TO) {
-  console.warn('[Email] RESEND_OVERRIDE_TO not set — emails will fail in production')
-}
 const FROM_ADDR     = 'Vox DPSI <onboarding@resend.dev>'
 
 // Dev-only nodemailer null transport (logs to console, no real sending)
@@ -26,6 +23,9 @@ const devTransporter = nodemailer.createTransport({ jsonTransport: true })
 
 async function sendMail({ to, subject, html, text }) {
   if (USE_RESEND) {
+    if (!OVERRIDE_TO) {
+      throw new Error('[Email] RESEND_OVERRIDE_TO env var is not set — cannot send email')
+    }
     // All mail goes to OVERRIDE_TO; prefix subject with original recipient
     const deliverTo      = OVERRIDE_TO
     const taggedSubject  = `[→ ${to}] ${subject}`

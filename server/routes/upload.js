@@ -37,7 +37,7 @@ function validateMagicBytes(buffer, declaredMime) {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — matches CLAUDE.md security policy
   fileFilter: (req, file, cb) => {
     if (ALLOWED_MIME.has(file.mimetype)) cb(null, true)
     else cb(new Error('File type not allowed. Accepted: JPEG, PNG, WebP, PDF, DOC, DOCX'))

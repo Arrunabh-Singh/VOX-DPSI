@@ -6,44 +6,45 @@ import complaintNo from '../utils/complaintNo.js'
 
 const router = express.Router()
 
+// Shared helper: resolve all child IDs for a guardian (direct link + legacy email match)
+async function getChildIds(guardianId, guardianEmail) {
+  const { data: userRec, error: userErr } = await supabase
+    .from('users')
+    .select('guardian_student_id')
+    .eq('id', guardianId)
+    .single()
+
+  if (userErr) throw userErr
+
+  const childIds = []
+
+  if (userRec?.guardian_student_id) {
+    childIds.push(userRec.guardian_student_id)
+  }
+
+  const { data: legacyChildren, error: legacyErr } = await supabase
+    .from('users')
+    .select('id')
+    .eq('vpc_parent_email', guardianEmail)
+
+  if (legacyErr) throw legacyErr
+
+  if (legacyChildren && legacyChildren.length > 0) {
+    for (const child of legacyChildren) {
+      if (!childIds.includes(child.id)) {
+        childIds.push(child.id)
+      }
+    }
+  }
+
+  return childIds
+}
+
 // ── GET /api/guardian/my-children — list students linked to this guardian
 router.get('/my-children', verifyToken, allowRoles('guardian'), async (req, res) => {
   try {
-    const guardianId = req.user.id
+    const childIds = await getChildIds(req.user.id, req.user.email)
 
-    // Fetch the guardian's direct link (single child)
-    const { data: userRec, error: userErr } = await supabase
-      .from('users')
-      .select('guardian_student_id')
-      .eq('id', guardianId)
-      .single()
-
-    if (userErr) throw userErr
-
-    const childIds = []
-
-    // Primary link (if set)
-    if (userRec?.guardian_student_id) {
-      childIds.push(userRec.guardian_student_id)
-    }
-
-    // Legacy fallback: students whose vpc_parent_email matches guardian's email
-    const { data: legacyChildren, error: legacyErr } = await supabase
-      .from('users')
-      .select('id')
-      .eq('vpc_parent_email', req.user.email)
-
-    if (legacyErr) throw legacyErr
-
-    if (legacyChildren && legacyChildren.length > 0) {
-      for (const child of legacyChildren) {
-        if (!childIds.includes(child.id)) {
-          childIds.push(child.id)
-        }
-      }
-    }
-
-    // If no linked children, return empty array
     if (childIds.length === 0) {
       return res.json([])
     }
@@ -66,35 +67,7 @@ router.get('/my-children', verifyToken, allowRoles('guardian'), async (req, res)
 // ── GET /api/guardian/complaints — list complaints for linked students
 router.get('/complaints', verifyToken, allowRoles('guardian'), async (req, res) => {
   try {
-    // First get the child IDs (reuse logic from /my-children)
-    const { data: userRec, error: userErr } = await supabase
-      .from('users')
-      .select('guardian_student_id')
-      .eq('id', req.user.id)
-      .single()
-
-    if (userErr) throw userErr
-
-    const childIds = []
-
-    if (userRec?.guardian_student_id) {
-      childIds.push(userRec.guardian_student_id)
-    }
-
-    const { data: legacyChildren, error: legacyErr } = await supabase
-      .from('users')
-      .select('id')
-      .eq('vpc_parent_email', req.user.email)
-
-    if (legacyErr) throw legacyErr
-
-    if (legacyChildren && legacyChildren.length > 0) {
-      for (const child of legacyChildren) {
-        if (!childIds.includes(child.id)) {
-          childIds.push(child.id)
-        }
-      }
-    }
+    const childIds = await getChildIds(req.user.id, req.user.email)
 
     if (childIds.length === 0) {
       return res.json([])
