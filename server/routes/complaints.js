@@ -478,12 +478,13 @@ router.get('/:id', verifyToken, async (req, res) => {
       supervisor: 'supervisor',
     }
     if (complaint.current_handler_role && complaint.current_handler_role !== 'council_member') {
-      const { data: handlerUser } = await supabase
+      const { data: handlerUser, error: handlerErr } = await supabase
         .from('users')
         .select('id, name, role')
         .eq('role', complaint.current_handler_role)
         .limit(1)
-        .single()
+        .maybeSingle()
+      if (handlerErr) console.error('[GET /:id] handler lookup error:', handlerErr)
       if (handlerUser) result.current_handler = handlerUser
     } else if (complaint.assigned_council_member_id) {
       result.current_handler = complaint.council_member
@@ -526,8 +527,8 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     res.json(result)
   } catch (err) {
-    console.error('Get complaint error:', err)
-    res.status(500).json({ error: 'Failed to fetch complaint' })
+    console.error('Get complaint error:', err?.message, err?.stack)
+    res.status(500).json({ error: 'Failed to fetch complaint', _debug: err?.message })
   }
 })
 
