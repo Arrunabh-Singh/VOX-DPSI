@@ -250,18 +250,18 @@ VITE_SUPABASE_ANON_KEY=<anon_key>
 ---
 
 ## 12. Security Checklist (For June 1 Launch)
-- [ ] Helmet headers enabled
-- [ ] CORS restricted to Vercel domain only
-- [ ] Rate limiting on all API routes (100 req/15min general, 5 req/15min auth)
-- [ ] Input sanitization on all text fields (prevent XSS)
-- [ ] SQL injection prevention (parameterized queries via Supabase)
-- [x] RLS policies active on ALL tables — `migration_rls_lockdown.sql` applied 2026-05-17. RESTRICTIVE deny_anon + deny_authenticated on all 18 tables. service_role bypasses RLS by default.
-- [ ] Service role key NEVER in client
-- [ ] JWT expiry 7 days, secure cookie flags
-- [ ] File upload: type whitelist (JPG/PNG/PDF), 5MB limit, UUID filenames
-- [ ] CSP headers
-- [ ] HSTS headers
-- [ ] Error messages don't leak stack traces in production
+- [x] Helmet headers enabled — configured in server/index.js
+- [x] CORS restricted to Vercel domain only — CLIENT_URL env var on Render
+- [x] Rate limiting — 200/min general, 20/15min auth, 10/hr complaint, 20/hr upload
+- [x] Input sanitization — sanitizeBody middleware in index.js strips script/iframe/event handler tags
+- [x] SQL injection prevention — parameterized queries via Supabase client throughout
+- [x] RLS policies active on ALL tables — `migration_rls_lockdown.sql` applied 2026-05-17. RESTRICTIVE deny_anon + deny_authenticated on all 18 tables.
+- [x] Service role key NEVER in client — server only, gitignored
+- [x] JWT expiry 7 days, secure cookie flags — httpOnly, secure:true prod, sameSite:'none' prod
+- [x] File upload: type whitelist, 5MB, UUID filenames, magic byte check, EXIF strip (sharp)
+- [x] CSP headers — vercel.json headers: script-src 'self', frame-ancestors 'none', connect-src Render only
+- [x] HSTS headers — max-age=63072000 includeSubDomains preload on Vercel + Helmet on Render
+- [x] Error messages don't leak stack traces — generic 500 response, stack logged server-side only
 
 ---
 
