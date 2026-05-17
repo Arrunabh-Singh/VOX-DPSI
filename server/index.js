@@ -155,14 +155,6 @@ app.get('/api/test-whatsapp', verifyToken, allowRoles('principal', 'vice_princip
   }
 })
 
-// Self-ping to prevent Render free tier sleep
-if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-  setInterval(() => {
-    fetch(process.env.RENDER_EXTERNAL_URL + '/api/health').catch(() => {})
-  }, 5 * 60 * 1000)
-  console.log('[SelfPing] Enabled — pinging every 5 minutes')
-}
-
 app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
@@ -187,11 +179,15 @@ app.listen(PORT, () => {
   startTermExpiryCron()
   startDailyDigestCron()
 
-  // Self-ping to prevent Render free tier sleep (spins down after 15 min)
+  // Self-ping to prevent Render free tier sleep (spins down after 15 min of inactivity)
   if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+    const pingUrl = process.env.RENDER_EXTERNAL_URL + '/health'
     setInterval(() => {
-      fetch(process.env.RENDER_EXTERNAL_URL + '/api/health').catch(() => {})
-    }, 5 * 60 * 1000)
+      fetch(pingUrl)
+        .then(r => console.log(`[SelfPing] ${r.status} — ${pingUrl}`))
+        .catch(e => console.warn('[SelfPing] Failed:', e.message))
+    }, 4 * 60 * 1000) // every 4 min — well under Render's 15-min inactivity threshold
+    console.log(`[SelfPing] Enabled — pinging ${pingUrl} every 4 minutes`)
   }
 })
 
