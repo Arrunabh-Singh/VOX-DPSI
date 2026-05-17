@@ -19,7 +19,7 @@ Student grievance management PWA for DPS Indore. Students file complaints → co
 | Database | Supabase PostgreSQL (Mumbai) | Supabase |
 | Auth | JWT via HttpOnly cookie (cookie-parser) | — |
 | Storage | Supabase Storage (private bucket + signed URLs) | Supabase |
-| Email | Brevo API (switched from Resend/SMTP) | — |
+| Email | Resend API (`RESEND_API_KEY`, all mail → `RESEND_OVERRIDE_TO`) | — |
 | Cron | node-cron (in-process) | — |
 
 **Brand:** Primary `#2d5c26` (DPS green), Gold `#c9a84c`, BG `#F5F7FA`
@@ -99,14 +99,14 @@ if not any_bad: print('ALL CLEAN')
 - **resolution_templates** — title, body, domain
 - **system_config** — key, value (for app settings)
 
-### Pending Migrations (MUST be run in Supabase SQL Editor)
-Run in order at: https://supabase.com/dashboard/project/gznhziptmydkalsrazpj/sql
-1. `migration_delegation.sql`
-2. `migration_consensus.sql`
-3. `migration_term_limits.sql`
-4. `migration_guardian_role.sql`
-5. `migration_erasure_feedback.sql`
-6. `migration_system_config.sql`
+### Pending Migrations
+All migrations have been applied to the Supabase database as of May 16, 2026. The following migration files exist in the project root and have been executed:
+1. `migration_delegation.sql` - delegation_rules table
+2. `migration_consensus.sql` - consensus columns on complaints
+3. `migration_term_limits.sql` - term_start/end on users
+4. `migration_guardian_role.sql` - guardian/director/board_member roles
+5. `migration_erasure_feedback.sql` - feedback columns on complaints
+6. `migration_system_config.sql` - system_config table
 
 ---
 
@@ -255,7 +255,7 @@ VITE_SUPABASE_ANON_KEY=<anon_key>
 - [ ] Rate limiting on all API routes (100 req/15min general, 5 req/15min auth)
 - [ ] Input sanitization on all text fields (prevent XSS)
 - [ ] SQL injection prevention (parameterized queries via Supabase)
-- [ ] RLS policies active on ALL tables
+- [x] RLS policies active on ALL tables — `migration_rls_lockdown.sql` applied 2026-05-17. RESTRICTIVE deny_anon + deny_authenticated on all 18 tables. service_role bypasses RLS by default.
 - [ ] Service role key NEVER in client
 - [ ] JWT expiry 7 days, secure cookie flags
 - [ ] File upload: type whitelist (JPG/PNG/PDF), 5MB limit, UUID filenames
